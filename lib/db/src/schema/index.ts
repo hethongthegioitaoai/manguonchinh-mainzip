@@ -70,3 +70,4 @@ export * from "./npcPlans";
 export * from "./npcEmotions";
 export * from "./npcDialogue";
 export * from "./npcAgent";
+export * from "./worldAnalytics";

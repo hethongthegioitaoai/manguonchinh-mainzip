@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   LogOut, Globe, Zap, User, Shield, Swords, Users,
-  TrendingUp, ChevronRight, Plus, Loader2, CheckCircle2, Scroll, Star, ExternalLink, Trophy, Settings, Brain, Sparkles, Skull, Hammer, Newspaper, Crown, ShoppingBag, Map, ScrollText, Infinity, Orbit, Mail, X, Gavel, Award, Handshake, Palette, Scale, AlertTriangle, Landmark, Target, Sword, Leaf, Compass, BookOpen, CloudLightning, Activity, Vote, Truck, PartyPopper, ListChecks, Smile,
+  TrendingUp, ChevronRight, Plus, Loader2, CheckCircle2, Scroll, Star, ExternalLink, Trophy, Settings, Brain, Sparkles, Skull, Hammer, Newspaper, Crown, ShoppingBag, Map, ScrollText, Infinity, Orbit, Mail, X, Gavel, Award, Handshake, Palette, Scale, AlertTriangle, Landmark, Target, Sword, Leaf, Compass, BookOpen, CloudLightning, Activity, Vote, Truck, PartyPopper, ListChecks, Smile, BarChart3,
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -683,6 +683,14 @@ export default function DashboardPage() {
                         tag: "NEW",
                         disabled: false,
                         onClick: () => setLocation("/npc-emotions"),
+                      },
+                      {
+                        icon: BarChart3,
+                        label: "WORLD ANALYTICS",
+                        sub: "Dân số, gia tộc, GDP, biên niên sử — đo lường văn minh NPC",
+                        tag: "NEW",
+                        disabled: false,
+                        onClick: () => setLocation("/world-analytics"),
                       },
                       {
                         icon: Globe,
