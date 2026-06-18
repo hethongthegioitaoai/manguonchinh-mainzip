@@ -82,6 +82,7 @@ import npcAgentRouter from "./npcAgent.js";
 import worldAnalyticsRouter from "./worldAnalytics.js";
 import stressTestRouter from "./stressTest.js";
 import playerAgentRouter from "./playerAgent.js";
+import unityIntegrationRouter from "./unityIntegration.js";
 
 const router: IRouter = Router();
 
@@ -168,5 +169,6 @@ router.use(worldAnalyticsRouter);
 router.use(stressTestRouter);
 router.use(playerAgentRouter);
 router.use(worldMapRouter);
+router.use(unityIntegrationRouter);
 
 export default router;

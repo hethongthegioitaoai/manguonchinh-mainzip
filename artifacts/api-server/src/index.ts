@@ -2,6 +2,7 @@ import { createServer } from "http";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { setupWebSocket } from "./lib/notify.js";
+import { setupUnityWebSocket } from "./lib/unityWs.js";
 import { tickAllWorlds } from "./routes/worldSimulation.js";
 
 const rawPort = process.env["PORT"];
@@ -18,6 +19,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 const server = createServer(app);
 setupWebSocket(server);
+setupUnityWebSocket(server);
 
 server.on("error", (err) => {
   logger.error({ err }, "Error listening on port");
