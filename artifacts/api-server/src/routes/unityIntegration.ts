@@ -130,7 +130,7 @@ function npcState(npc: { energy: number; hunger: number; active: number; current
 
 // ─── GET /api/unity/world-state/:worldSlug ────────────────────────────────
 
-router.get("/unity/world-state/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/unity/world-state/:worldSlug", async (req, res) => {
   const { worldSlug } = req.params as Record<string, string>;
 
   try {
@@ -325,7 +325,7 @@ router.get("/unity/world-state/:worldSlug", isAuthenticated, async (req, res) =>
 
 // ─── GET /api/unity/world-events/:worldSlug ───────────────────────────────
 
-router.get("/unity/world-events/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/unity/world-events/:worldSlug", async (req, res) => {
   const { worldSlug } = req.params as Record<string, string>;
   const limit = Math.min(Number(req.query.limit ?? 50), 200);
   const since = req.query.since ? new Date(String(req.query.since)) : null;
