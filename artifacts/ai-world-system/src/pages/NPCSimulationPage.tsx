@@ -6,7 +6,7 @@ import {
   BookOpen, Play, RefreshCw, ChevronLeft, Activity, Clock,
   Sparkles, Users, Sword, Shield, Star, Handshake, Eye,
   Briefcase, Package, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, TrendingUp,
-  ShoppingCart, TrendingDown, Minus, Home, UserPlus, Baby,
+  ShoppingCart, TrendingDown, Minus, Home, UserPlus, Baby, MessageCircle,
 } from "lucide-react";
 
 const WORLDS = [
@@ -544,6 +544,10 @@ export default function NPCSimulationPage() {
               <Clock size={12} /><span>Tick #{tickCount} · {lastTickTime.toLocaleTimeString("vi-VN")}</span>
             </div>
           )}
+          <button onClick={() => setLocation("/npc-dialogue")}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all border border-gray-700 text-gray-500 hover:text-violet-400 hover:border-violet-500">
+            <MessageCircle size={12} />ĐỐI THOẠI
+          </button>
           <button onClick={() => { setDetailTab("market"); loadMarket(); }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all border"
             style={{ borderColor: detailTab === "market" ? worldColor : "#374151", color: detailTab === "market" ? worldColor : "#6b7280", background: detailTab === "market" ? `${worldColor}18` : "transparent" }}>
