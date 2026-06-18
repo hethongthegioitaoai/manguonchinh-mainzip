@@ -227,7 +227,7 @@ function buildReport(
    Body: { worldSlug, ticks: 100 | 1000 | 10000 | 100000 }
    Streams SSE progress
 ══════════════════════════════════════════════════════ */
-router.post("/api/stress-test/run", isAuthenticated, async (req, res) => {
+router.post("/stress-test/run", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug, ticks } = req.body as { worldSlug: string; ticks: number };
     const VALID_TICKS = [100, 1000, 10000, 100000];
@@ -495,7 +495,7 @@ router.post("/api/stress-test/run", isAuthenticated, async (req, res) => {
 });
 
 /* GET /api/stress-test/runs?worldSlug=xxx */
-router.get("/api/stress-test/runs", isAuthenticated, async (req, res) => {
+router.get("/stress-test/runs", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.query as { worldSlug?: string };
     const query = db.select().from(stressTestRuns).orderBy(desc(stressTestRuns.startedAt)).limit(20);
@@ -507,7 +507,7 @@ router.get("/api/stress-test/runs", isAuthenticated, async (req, res) => {
 });
 
 /* GET /api/stress-test/runs/:runId */
-router.get("/api/stress-test/runs/:runId", isAuthenticated, async (req, res) => {
+router.get("/stress-test/runs/:runId", isAuthenticated, async (req, res) => {
   try {
     const [run] = await db.select().from(stressTestRuns).where(eq(stressTestRuns.id, req.params.runId));
     if (!run) return res.status(404).json({ error: "Run không tồn tại" });
@@ -516,7 +516,7 @@ router.get("/api/stress-test/runs/:runId", isAuthenticated, async (req, res) => 
 });
 
 /* GET /api/stress-test/runs/:runId/snapshots */
-router.get("/api/stress-test/runs/:runId/snapshots", isAuthenticated, async (req, res) => {
+router.get("/stress-test/runs/:runId/snapshots", isAuthenticated, async (req, res) => {
   try {
     const snapshots = await db.select().from(stressTestSnapshots)
       .where(eq(stressTestSnapshots.runId, req.params.runId))
@@ -526,7 +526,7 @@ router.get("/api/stress-test/runs/:runId/snapshots", isAuthenticated, async (req
 });
 
 /* GET /api/stress-test/runs/:runId/reports */
-router.get("/api/stress-test/runs/:runId/reports", isAuthenticated, async (req, res) => {
+router.get("/stress-test/runs/:runId/reports", isAuthenticated, async (req, res) => {
   try {
     const reports = await db.select().from(stressTestReports)
       .where(eq(stressTestReports.runId, req.params.runId))
@@ -536,7 +536,7 @@ router.get("/api/stress-test/runs/:runId/reports", isAuthenticated, async (req, 
 });
 
 /* GET /api/stress-test/runs/:runId/replay */
-router.get("/api/stress-test/runs/:runId/replay", isAuthenticated, async (req, res) => {
+router.get("/stress-test/runs/:runId/replay", isAuthenticated, async (req, res) => {
   try {
     const { category, limit = "200" } = req.query as { category?: string; limit?: string };
     let q = db.select().from(stressTestReplay)
@@ -554,7 +554,7 @@ router.get("/api/stress-test/runs/:runId/replay", isAuthenticated, async (req, r
 });
 
 /* GET /api/stress-test/worlds — list worlds with sim state */
-router.get("/api/stress-test/worlds", isAuthenticated, async (req, res) => {
+router.get("/stress-test/worlds", isAuthenticated, async (req, res) => {
   try {
     const worlds = await db.select({
       slug:       customWorlds.slug,
