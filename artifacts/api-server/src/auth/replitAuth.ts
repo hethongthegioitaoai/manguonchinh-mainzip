@@ -175,6 +175,14 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // Support custom session-based auth (username/password login)
+  const sessionUserId = (req.session as any).userId;
+  if (sessionUserId) {
+    (req as any).userId = sessionUserId;
+    return next();
+  }
+
+  // Support Replit OIDC / Passport auth
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user?.expires_at) {
@@ -183,6 +191,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
+    (req as any).userId = user.claims?.sub;
     return next();
   }
 
@@ -195,6 +204,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
+    (req as any).userId = user.claims?.sub;
     return next();
   } catch {
     return res.status(401).json({ message: "Unauthorized" });
