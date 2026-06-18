@@ -71,3 +71,5 @@ export * from "./npcEmotions";
 export * from "./npcDialogue";
 export * from "./npcAgent";
 export * from "./worldAnalytics";
+export * from "./stressTest";
+export * from "./playerAgent";

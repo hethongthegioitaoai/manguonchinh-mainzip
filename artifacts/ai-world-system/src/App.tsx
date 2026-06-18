@@ -87,6 +87,7 @@ import PersonalityEvolutionPage from "@/pages/PersonalityEvolutionPage";
 import NpcDialoguePage from "@/pages/NpcDialoguePage";
 import NpcAgentPage from "@/pages/NpcAgentPage";
 import WorldAnalyticsPage from "@/pages/WorldAnalyticsPage";
+import PlayerAgentPage from "@/pages/PlayerAgentPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
 
@@ -183,6 +184,7 @@ function Router() {
       <Route path="/npc-dialogue" component={NpcDialoguePage} />
       <Route path="/npc-agent" component={NpcAgentPage} />
       <Route path="/world-analytics" component={WorldAnalyticsPage} />
+      <Route path="/player-agent" component={PlayerAgentPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />

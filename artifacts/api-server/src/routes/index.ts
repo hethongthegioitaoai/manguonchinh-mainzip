@@ -79,6 +79,8 @@ import personalityEvolutionRouter from "./personalityEvolution.js";
 import npcDialogueRouter from "./npcDialogue.js";
 import npcAgentRouter from "./npcAgent.js";
 import worldAnalyticsRouter from "./worldAnalytics.js";
+import stressTestRouter from "./stressTest.js";
+import playerAgentRouter from "./playerAgent.js";
 
 const router: IRouter = Router();
 
@@ -162,5 +164,7 @@ router.use(personalityEvolutionRouter);
 router.use(npcDialogueRouter);
 router.use(npcAgentRouter);
 router.use(worldAnalyticsRouter);
+router.use(stressTestRouter);
+router.use(playerAgentRouter);
 
 export default router;
