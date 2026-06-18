@@ -4,6 +4,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { characters } from "./characters";
 import { users } from "./auth";
+import { territories } from "./territories";
 
 /* ─────────────────────────────────────────────────
    PLAYER AGENT — core entity extending characters
@@ -13,6 +14,7 @@ export const playerAgents = pgTable("player_agents", {
   characterId:     uuid("character_id").notNull().unique().references(() => characters.id, { onDelete: "cascade" }),
   userId:          varchar("user_id", { length: 128 }).notNull().references(() => users.id, { onDelete: "cascade" }),
   worldSlug:       varchar("world_slug", { length: 64 }).notNull(),
+  currentTerritoryId: uuid("current_territory_id").references(() => territories.id, { onDelete: "set null" }),
 
   // Economy
   gold:            integer("gold").notNull().default(500),

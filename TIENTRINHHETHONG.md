@@ -1387,6 +1387,32 @@ configureWorkflow("Frontend", "pnpm --filter @workspace/ai-world-system run dev"
 - [x] Nút Dashboard "NGOẠI GIAO NPC"
 
 ### ════════════════════════════════════════
+### PHASE 52.5 — HỆ THỐNG BẢN ĐỒ THẾ GIỚI
+### ════════════════════════════════════════
+
+**Mục tiêu:** Bản đồ SVG tương tác — hiển thị lãnh thổ, phe phái, chiến tranh, player agent di chuyển.
+
+- [x] Schema: thêm cột `x`, `y`, `terrain` vào `territories`
+- [x] Schema: thêm cột `current_territory_id` vào `player_agents`
+- [x] Schema mới: `army_movements` (warId, fromTerritoryId, toTerritoryId, armySize, status, progress)
+- [x] DB push thành công (`pnpm --filter @workspace/db run push`)
+- [x] API: `GET /world-map/:worldSlug` — territories + factions + governments + wars + players
+- [x] API: `POST /world-map/:worldSlug/seed` — tạo x,y,terrain ngẫu nhiên cho lãnh thổ
+- [x] API: `GET /world-map/territory/:id` — chi tiết 1 lãnh thổ
+- [x] API: `POST /world-map/player/move` — player agent di chuyển tới lãnh thổ
+- [x] API: `GET /world-map/player/me` — lấy danh sách agent của user hiện tại
+- [x] API: `GET /world-map/:worldSlug/armies` — army movements đang hoạt động
+- [x] Trang `/world-map`: SVG bản đồ hex 1000×620 — pan/zoom chuột, tooltip hover, sidebar chi tiết
+- [x] Hiển thị màu địa hình (Đồng Bằng/Núi Cao/Rừng Sâu/Sa Mạc/Biển Cả/Đầm Lầy/Núi Lửa)
+- [x] Hiển thị màu phe phái sở hữu (palette 12 màu từ faction.id hash)
+- [x] Icon loại lãnh thổ: 🏙 thành phố / 🏘 làng / 🌾 nông trại / ⚓ cảng / 🏰 pháo đài
+- [x] Hiển thị dân số/thịnh vượng/an ninh: statbars trong panel + mini bars trên map
+- [x] Chiến tranh: đường dashed đỏ có animation giữa 2 thủ đô, badge cảnh báo
+- [x] Player marker: icon 👤 glowing cyan trên lãnh thổ hiện tại
+- [x] Di chuyển player: click lãnh thổ → "Di Chuyển Đến Đây" → POST /world-map/player/move
+- [x] Panel chi tiết: faction, chính phủ, thuế suất, ngân khố, tọa độ, số player đang ở
+
+### ════════════════════════════════════════
 ### PHASE 52 — HỆ THỐNG QUÂN ĐỘI NPC
 ### ════════════════════════════════════════
 

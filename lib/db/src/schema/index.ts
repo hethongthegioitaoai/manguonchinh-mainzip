@@ -73,3 +73,4 @@ export * from "./npcAgent";
 export * from "./worldAnalytics";
 export * from "./stressTest";
 export * from "./playerAgent";
+export * from "./worldMap";

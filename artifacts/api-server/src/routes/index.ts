@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health.js";
+import worldMapRouter from "./worldMap.js";
 import authRouter from "./auth.js";
 import charactersRouter from "./characters.js";
 import questsRouter from "./quests.js";
@@ -166,5 +167,6 @@ router.use(npcAgentRouter);
 router.use(worldAnalyticsRouter);
 router.use(stressTestRouter);
 router.use(playerAgentRouter);
+router.use(worldMapRouter);
 
 export default router;
