@@ -217,7 +217,7 @@ export function getEmotionBehavior(emotion: typeof npcEmotions.$inferSelect): {
 ════════════════════════════════════════ */
 router.get("/api/npc-emotions/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const emotion = await ensureEmotion(npcId);
     const logs = await db.select().from(npcEmotionLogs)
       .where(eq(npcEmotionLogs.npcId, npcId))
@@ -232,7 +232,7 @@ router.get("/api/npc-emotions/:npcId", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-emotions/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores)
       .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
 
@@ -255,7 +255,7 @@ router.get("/api/npc-emotions/world/:worldSlug", isAuthenticated, async (req, re
 ════════════════════════════════════════ */
 router.post("/api/npc-emotions/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores)
       .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length === 0) return res.json({ message: "Không có NPC", ticked: 0 });
@@ -333,7 +333,7 @@ router.post("/api/npc-emotions/tick/:worldSlug", isAuthenticated, async (req, re
 ════════════════════════════════════════ */
 router.post("/api/npc-emotions/trigger/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const { event } = req.body as { event: string };
 
     const TRIGGERS: Record<string, Partial<EmotionState> & { reason: string }> = {
@@ -383,7 +383,7 @@ router.post("/api/npc-emotions/trigger/:npcId", isAuthenticated, async (req, res
 ════════════════════════════════════════ */
 router.get("/api/npc-emotions/summary/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id }).from(npcCores)
       .where(eq(npcCores.worldSlug, worldSlug));
     if (npcs.length === 0) return res.json({ avg: {}, dominant: "Bình Thường", count: 0 });

@@ -111,14 +111,14 @@ router.post("/api/tournament/register", isAuthenticated, async (req, res) => {
       tournamentId: tournament.id,
       characterId: char.id,
       characterName: char.name,
-      worldSlug: char.worldSlug,
+      worldSlug: (char.stats as any)?.world_slug ?? "cultivation",
       seed: count.length + 1,
     }).returning();
 
     // Cộng vào prize pool (phí đăng ký 50 gold)
     const entryFee = 50;
-    if ((char.gold ?? 0) >= entryFee) {
-      await db.update(characters).set({ gold: (char.gold ?? 0) - entryFee }).where(eq(characters.id, char.id));
+    if (((char.stats as any)?.gold ?? 0) >= entryFee) {
+      await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - entryFee } }).where(eq(characters.id, char.id));
       await db.update(tournaments).set({ prizePool: tournament.prizePool + entryFee, participantCount: count.length + 1 }).where(eq(tournaments.id, tournament.id));
     }
 
@@ -155,7 +155,7 @@ router.post("/api/tournament/simulate-round", isAuthenticated, async (req, res) 
         // Trao thưởng
         const [winnerChar] = await db.select().from(characters).where(eq(characters.id, winner.characterId));
         if (winnerChar) {
-          await db.update(characters).set({ gold: (winnerChar.gold ?? 0) + Math.floor(tournament.prizePool * 0.6) }).where(eq(characters.id, winner.characterId));
+          await db.update(characters).set({ stats: { ...(winnerChar.stats as any), gold: ((winnerChar.stats as any)?.gold ?? 0) + Math.floor(tournament.prizePool * 0.6) } }).where(eq(characters.id, winner.characterId));
         }
         await db.update(tournaments).set({ status: "ended", winnerId: winner.characterId, winnerName: winner.characterName, endAt: new Date() }).where(eq(tournaments.id, tournamentId));
         return res.json({ ended: true, winner, prize: Math.floor(tournament.prizePool * 0.6), message: `🏆 ${winner.characterName} là Thiên Hạ Đệ Nhất!` });

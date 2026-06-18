@@ -509,7 +509,7 @@ router.get("/stress-test/runs", isAuthenticated, async (req, res) => {
 /* GET /api/stress-test/runs/:runId */
 router.get("/stress-test/runs/:runId", isAuthenticated, async (req, res) => {
   try {
-    const [run] = await db.select().from(stressTestRuns).where(eq(stressTestRuns.id, req.params.runId));
+    const [run] = await db.select().from(stressTestRuns).where(eq(stressTestRuns.id, req.params.runId as string));
     if (!run) return res.status(404).json({ error: "Run không tồn tại" });
     res.json(run);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -519,7 +519,7 @@ router.get("/stress-test/runs/:runId", isAuthenticated, async (req, res) => {
 router.get("/stress-test/runs/:runId/snapshots", isAuthenticated, async (req, res) => {
   try {
     const snapshots = await db.select().from(stressTestSnapshots)
-      .where(eq(stressTestSnapshots.runId, req.params.runId))
+      .where(eq(stressTestSnapshots.runId, req.params.runId as string))
       .orderBy(stressTestSnapshots.tickNumber);
     res.json(snapshots);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -529,7 +529,7 @@ router.get("/stress-test/runs/:runId/snapshots", isAuthenticated, async (req, re
 router.get("/stress-test/runs/:runId/reports", isAuthenticated, async (req, res) => {
   try {
     const reports = await db.select().from(stressTestReports)
-      .where(eq(stressTestReports.runId, req.params.runId))
+      .where(eq(stressTestReports.runId, req.params.runId as string))
       .orderBy(stressTestReports.tickNumber);
     res.json(reports);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -540,12 +540,12 @@ router.get("/stress-test/runs/:runId/replay", isAuthenticated, async (req, res) 
   try {
     const { category, limit = "200" } = req.query as { category?: string; limit?: string };
     let q = db.select().from(stressTestReplay)
-      .where(eq(stressTestReplay.runId, req.params.runId));
+      .where(eq(stressTestReplay.runId, req.params.runId as string));
     const events = await db.select().from(stressTestReplay)
       .where(
         category
-          ? and(eq(stressTestReplay.runId, req.params.runId), eq(stressTestReplay.category, category))
-          : eq(stressTestReplay.runId, req.params.runId)
+          ? and(eq(stressTestReplay.runId, req.params.runId as string), eq(stressTestReplay.category, category))
+          : eq(stressTestReplay.runId, req.params.runId as string)
       )
       .orderBy(stressTestReplay.tickNumber)
       .limit(Math.min(Number(limit), 500));

@@ -53,7 +53,7 @@ async function settleExpiredVotes() {
 router.get("/api/governance/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     await settleExpiredVotes();
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [constitution, council, openVotes, decrees] = await Promise.all([
       getOrCreateConstitution(worldSlug),
       db.select().from(worldCouncil).where(eq(worldCouncil.worldSlug, worldSlug)).orderBy(desc(worldCouncil.appointedAt)),
@@ -69,7 +69,7 @@ router.get("/api/governance/:worldSlug", isAuthenticated, async (req, res) => {
 ───────────────────────────────────────────────────── */
 router.get("/api/governance/:worldSlug/history", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [pastVotes, pastDecrees] = await Promise.all([
       db.select().from(worldVotes).where(eq(worldVotes.worldSlug, worldSlug))
         .orderBy(desc(worldVotes.createdAt)).limit(20),
@@ -86,7 +86,7 @@ router.get("/api/governance/:worldSlug/history", isAuthenticated, async (req, re
 router.post("/api/governance/appoint/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { characterId, role, votingPower } = z.object({
       characterId:  z.string().uuid(),
       role:         z.enum(["minister", "ambassador", "citizen_rep"]).default("citizen_rep"),
@@ -128,7 +128,7 @@ router.post("/api/governance/appoint/:worldSlug", isAuthenticated, async (req, r
 router.post("/api/governance/propose/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { proposalType, proposalTitle, proposalContent } = z.object({
       proposalType:    z.enum(["law", "tax", "war_declaration", "trade_policy", "entry_policy", "other"]),
       proposalTitle:   z.string().min(1).max(200),
@@ -143,7 +143,7 @@ router.post("/api/governance/propose/:worldSlug", isAuthenticated, async (req, r
     const isOwner = ownerCheck.rows.length > 0 || builtinOwned;
 
     const userChar = await db.select().from(characters).where(
-      and(eq(characters.userId, userId), eq(characters.worldSlug, worldSlug))
+      and(eq(characters.userId, userId), sql`stats->>'world_slug' = ${worldSlug}`)
     );
     if (!isOwner && !userChar.length) {
       return res.status(403).json({ message: "Bạn không có nhân vật trong thế giới này" });
@@ -177,7 +177,7 @@ router.post("/api/governance/propose/:worldSlug", isAuthenticated, async (req, r
 router.post("/api/governance/vote/:voteId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { voteId } = req.params;
+    const { voteId } = req.params as Record<string, string>;
     const { support, characterId } = z.object({
       support:     z.boolean(),
       characterId: z.string().uuid(),
@@ -211,7 +211,7 @@ router.post("/api/governance/vote/:voteId", isAuthenticated, async (req, res) =>
 router.post("/api/governance/decree/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { decreeName, decreeContent, effect, stabilityDelta, durationHours } = z.object({
       decreeName:     z.string().min(1).max(200),
       decreeContent:  z.string().min(1),
@@ -269,7 +269,7 @@ router.post("/api/governance/decree/:worldSlug", isAuthenticated, async (req, re
 router.patch("/api/governance/constitution/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const updates = z.object({
       entryPolicy:  z.enum(["open", "restricted", "closed"]).optional(),
       tradePolicy:  z.enum(["free", "protected", "embargo"]).optional(),

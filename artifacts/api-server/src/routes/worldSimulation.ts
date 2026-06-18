@@ -179,7 +179,7 @@ export async function tickAllWorlds(): Promise<void> {
 /* GET /api/simulation/state/:worldSlug */
 router.get("/api/simulation/state/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     let [state] = await db.select().from(worldSimState).where(eq(worldSimState.worldSlug, worldSlug));
     if (!state) {
       const { state: s } = await tickWorld(worldSlug);
@@ -192,7 +192,7 @@ router.get("/api/simulation/state/:worldSlug", isAuthenticated, async (req, res)
 /* GET /api/simulation/logs/:worldSlug */
 router.get("/api/simulation/logs/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const limit = Math.min(Number(req.query.limit) || 20, 50);
     const logs = await db.select().from(worldSimLog)
       .where(eq(worldSimLog.worldSlug, worldSlug))
@@ -225,7 +225,7 @@ router.get("/api/simulation/all", isAuthenticated, async (req, res) => {
 /* POST /api/simulation/tick/:worldSlug — manual tick */
 router.post("/api/simulation/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const result = await tickWorld(worldSlug);
     res.json(result);
   } catch (e: any) { res.status(500).json({ error: e.message }); }

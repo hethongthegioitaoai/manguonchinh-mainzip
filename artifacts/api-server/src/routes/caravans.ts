@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { caravans, caravanRaids, characters } from "@workspace/db/schema";
 import { eq, desc, and, or } from "drizzle-orm";
-import { requireAuth } from "../auth/replitAuth.js";
+import { isAuthenticated } from "../auth/replitAuth.js";
 
 const router = Router();
 

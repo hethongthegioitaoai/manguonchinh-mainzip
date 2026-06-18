@@ -542,7 +542,7 @@ function shouldTriggerAgent(ctx: AgentContext): boolean {
 ════════════════════════════════════════ */
 router.post("/api/npc-agent/decide/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const { trigger = "manual", force = false } = req.body;
 
     const ctx = await buildAgentContext(npcId, trigger);
@@ -608,7 +608,7 @@ router.post("/api/npc-agent/decide/:npcId", isAuthenticated, async (req, res) =>
 router.get("/api/npc-agent/logs/:npcId", isAuthenticated, async (req, res) => {
   try {
     const logs = await db.select().from(npcAgentLogs)
-      .where(eq(npcAgentLogs.npcId, req.params.npcId))
+      .where(eq(npcAgentLogs.npcId, req.params.npcId as string))
       .orderBy(desc(npcAgentLogs.createdAt)).limit(20);
     return res.json(logs);
   } catch (err) {
@@ -639,7 +639,7 @@ router.get("/api/npc-agent/dashboard/:worldSlug", isAuthenticated, async (req, r
     })
       .from(npcAgentLogs)
       .innerJoin(npcCores, eq(npcAgentLogs.npcId, npcCores.id))
-      .where(eq(npcAgentLogs.worldSlug, req.params.worldSlug))
+      .where(eq(npcAgentLogs.worldSlug, req.params.worldSlug as string))
       .orderBy(desc(npcAgentLogs.createdAt))
       .limit(50);
     return res.json(logs);
@@ -655,7 +655,7 @@ router.get("/api/npc-agent/dashboard/:worldSlug", isAuthenticated, async (req, r
 ════════════════════════════════════════ */
 router.post("/api/npc-agent/scan/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id, name: npcCores.name })
       .from(npcCores)
       .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)))
@@ -699,7 +699,7 @@ router.post("/api/npc-agent/scan/:worldSlug", isAuthenticated, async (req, res) 
 ════════════════════════════════════════ */
 router.get("/api/npc-agent/context/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const ctx = await buildAgentContext(req.params.npcId, "manual");
+    const ctx = await buildAgentContext(req.params.npcId as string, "manual");
     if (!ctx) return res.status(404).json({ message: "Không tìm thấy NPC" });
     const prompt = buildAgentPrompt(ctx);
     return res.json({ context: ctx, prompt, shouldTrigger: shouldTriggerAgent(ctx) });

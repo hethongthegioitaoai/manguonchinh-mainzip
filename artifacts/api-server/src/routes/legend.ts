@@ -67,7 +67,7 @@ router.get("/api/legends/check", isAuthenticated, async (req, res) => {
 
     const alreadyInducted = await db.select().from(legends).where(eq(legends.characterId, char.id));
 
-    res.json({ eligible, reasons, alreadyInducted: alreadyInducted.length > 0, character: { name: char.name, level: char.level, system: char.system } });
+    res.json({ eligible, reasons, alreadyInducted: alreadyInducted.length > 0, character: { name: char.name, level: char.level, system: (char.stats as any)?.system } });
   } catch { res.status(500).json({ message: "Lỗi server" }); }
 });
 
@@ -90,16 +90,17 @@ router.post("/api/legends/induct", isAuthenticated, async (req, res) => {
       conditions: "Cần: cấp ≥50, HOẶC ≥1000 chiến thắng, HOẶC ≥20 thành tựu",
     });
 
-    const worldSlug = char.worldSlug ?? "cultivation";
+    const charStats = char.stats as any ?? {};
+    const worldSlug = charStats.world_slug ?? "cultivation";
     const worldName = BUILTIN_WORLDS[worldSlug] ?? worldSlug;
     const { title, story } = await generateEpicStory(char, worldName, reasons);
 
     const [legend] = await db.insert(legends).values({
       characterId: char.id, characterName: char.name, userId,
-      worldSlug, worldName, system: char.system ?? "Kiếm Thần",
+      worldSlug, worldName, system: charStats.system ?? "Kiếm Thần",
       level: char.level ?? 1, legendTitle: title, epicStory: story,
-      achievements: achs.map(a => a.achievementId),
-      stats: { str: char.str, dex: char.dex, int: char.int, vit: char.vit, lck: char.lck, cha: char.cha },
+      achievements: achs.map(a => a.achievementKey),
+      stats: { str: charStats.str ?? 1, dex: charStats.dex ?? 1, int: charStats.int ?? 1, vit: charStats.vit ?? 1, lck: charStats.lck ?? 1, cha: charStats.cha ?? 1 },
     }).returning();
 
     res.json({ legend, message: `${char.name} đã được phong "Huyền Thoại"! Câu chuyện lưu mãi mãi!` });
@@ -112,7 +113,7 @@ router.post("/api/legends/induct", isAuthenticated, async (req, res) => {
 router.post("/api/legends/vote/:legendId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { legendId } = req.params;
+    const { legendId } = req.params as Record<string, string>;
 
     const already = await db.select().from(legendVotes).where(and(eq(legendVotes.legendId, legendId), eq(legendVotes.userId, userId)));
     if (already.length > 0) return res.status(400).json({ message: "Bạn đã bình chọn anh hùng này rồi" });
@@ -129,7 +130,7 @@ router.post("/api/legends/vote/:legendId", isAuthenticated, async (req, res) => 
 ───────────────────────────────────────────────────── */
 router.get("/api/legends/:legendId", isAuthenticated, async (req, res) => {
   try {
-    const { legendId } = req.params;
+    const { legendId } = req.params as Record<string, string>;
     const userId = (req as any).userId;
     const [legend] = await db.select().from(legends).where(eq(legends.id, legendId));
     if (!legend) return res.status(404).json({ message: "Không tìm thấy" });

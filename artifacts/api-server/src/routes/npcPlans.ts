@@ -101,7 +101,7 @@ async function addMemory(npcId: string, event: string, importance: number) {
 ════════════════════════════════════════ */
 router.get("/api/npc-plans/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const plans = await db.select().from(npcPlans)
       .where(eq(npcPlans.npcId, npcId))
       .orderBy(desc(npcPlans.createdAt));
@@ -127,7 +127,7 @@ router.get("/api/npc-plans/:npcId", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-plans/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(eq(npcCores.worldSlug, worldSlug));
 
     const result = await Promise.all(npcs.map(async (npc) => {
@@ -160,7 +160,7 @@ router.get("/api/npc-plans/world/:worldSlug", isAuthenticated, async (req, res) 
 ════════════════════════════════════════ */
 router.post("/api/npc-plans/auto-generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length === 0) return res.json({ message: "Không có NPC", generated: 0 });
 
@@ -215,7 +215,7 @@ router.post("/api/npc-plans/auto-generate/:worldSlug", isAuthenticated, async (r
 ════════════════════════════════════════ */
 router.post("/api/npc-plans/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length === 0) return res.json({ message: "Không có NPC", advanced: 0, completed: 0, failed: 0 });
 
@@ -318,7 +318,7 @@ router.post("/api/npc-plans/tick/:worldSlug", isAuthenticated, async (req, res) 
 ════════════════════════════════════════ */
 router.get("/api/npc-plans/summary/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug));
 
     let active = 0, planCompleted = 0, planFailed = 0, totalSteps = 0, completedSteps = 0;

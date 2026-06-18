@@ -15,7 +15,7 @@ function rand(min: number, max: number) { return Math.floor(Math.random() * (max
 ════════════════════════════════════════ */
 router.get("/api/npc-family/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
 
     const [family] = await db.select().from(npcFamilies).where(eq(npcFamilies.npcId, npcId));
 
@@ -180,7 +180,7 @@ router.post("/api/npc-family/set-parent", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.post("/api/npc-family/auto-match/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length < 2) return res.json({ formed: 0, message: "Không đủ NPC" });
 

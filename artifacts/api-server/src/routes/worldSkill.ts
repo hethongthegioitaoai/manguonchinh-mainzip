@@ -52,7 +52,7 @@ async function seedWorldSkills(worldSlug: string, worldName: string): Promise<vo
 ───────────────────────────────────────────────────── */
 router.get("/api/world-skills/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const userId = (req as any).userId;
 
     const worldName = BUILTIN_WORLDS[worldSlug] ?? (await db.select().from(customWorlds).where(eq(customWorlds.slug, worldSlug)).limit(1))[0]?.name ?? worldSlug;
@@ -98,9 +98,9 @@ router.post("/api/world-skills/learn", isAuthenticated, async (req, res) => {
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
     if ((char.level ?? 1) < skill.requiredLevel) return res.status(400).json({ message: `Cần cấp ${skill.requiredLevel} để học kỹ năng này` });
-    if ((char.gold ?? 0) < skill.learnCost) return res.status(400).json({ message: `Cần ${skill.learnCost} gold để học` });
+    if (((char.stats as any)?.gold ?? 0) < skill.learnCost) return res.status(400).json({ message: `Cần ${skill.learnCost} gold để học` });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - skill.learnCost }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - skill.learnCost } }).where(eq(characters.id, char.id));
     await db.update(worldUniqueSkills).set({ learners: (skill.learners ?? 0) + 1 }).where(eq(worldUniqueSkills.id, skillId));
 
     const [learned] = await db.insert(characterWorldSkills).values({

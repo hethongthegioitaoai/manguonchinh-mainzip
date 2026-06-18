@@ -203,7 +203,7 @@ const bidSchema = z.object({ charId: z.string().uuid(), amount: z.number().int()
 router.post("/api/auction/:id/bid", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const auctionId = req.params.id;
+    const auctionId = req.params.id as string;
     const body = bidSchema.safeParse(req.body);
     if (!body.success) return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
     const { charId, amount } = body.data;
@@ -252,7 +252,7 @@ router.post("/api/auction/:id/bid", isAuthenticated, async (req, res) => {
 router.post("/api/auction/:id/buyout", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const auctionId = req.params.id;
+    const auctionId = req.params.id as string;
     const charId = z.string().uuid().parse(req.body.charId);
 
     const [char] = await db.select().from(characters)
@@ -305,7 +305,7 @@ router.post("/api/auction/:id/buyout", isAuthenticated, async (req, res) => {
 router.delete("/api/auction/:id/cancel", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const auctionId = req.params.id;
+    const auctionId = req.params.id as string;
     const charId = z.string().uuid().parse(req.body.charId);
 
     const [char] = await db.select().from(characters)

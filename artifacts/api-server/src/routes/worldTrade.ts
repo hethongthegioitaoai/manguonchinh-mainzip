@@ -181,7 +181,7 @@ router.post("/api/world-trade/list", isAuthenticated, async (req, res) => {
 router.post("/api/world-trade/:listingId/buy", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { listingId } = req.params;
+    const { listingId } = req.params as Record<string, string>;
     const { characterId } = req.body;
 
     if (!characterId) return res.status(400).json({ error: "Thiếu characterId" });
@@ -269,7 +269,7 @@ router.post("/api/world-trade/:listingId/buy", isAuthenticated, async (req, res)
 router.delete("/api/world-trade/:listingId/cancel", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { listingId } = req.params;
+    const { listingId } = req.params as Record<string, string>;
 
     const rows = await db.select({ listing: worldTradeListings, char: characters })
       .from(worldTradeListings)

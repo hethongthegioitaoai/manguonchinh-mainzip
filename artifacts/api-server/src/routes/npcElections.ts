@@ -34,7 +34,7 @@ function electionTypeForGovType(govType: string): string {
 ════════════════════════════════════════ */
 router.get("/api/npc-elections/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     if (terrs.length === 0) return res.json({ elections: [] });
@@ -95,7 +95,7 @@ router.get("/api/npc-elections/:worldSlug", isAuthenticated, async (req, res) =>
 ════════════════════════════════════════ */
 router.post("/api/npc-elections/open/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     if (terrs.length === 0) return res.json({ opened: 0, message: "Chưa có lãnh thổ" });
@@ -176,7 +176,7 @@ router.post("/api/npc-elections/open/:worldSlug", isAuthenticated, async (req, r
           electionId:    newEl.id,
           npcId:         p.npc.id,
           factionId:     factionMap[p.npc.id] ?? null,
-          campaignScore: p.campaignScore,
+          campaignScore: (p as any).campaignScore,
           totalVotes:    0,
           isIncumbent:   p.isIncumbent,
         });
@@ -207,7 +207,7 @@ router.post("/api/npc-elections/open/:worldSlug", isAuthenticated, async (req, r
 ════════════════════════════════════════ */
 router.post("/api/npc-elections/vote/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     if (terrs.length === 0) return res.json({ votes: 0, message: "Không có lãnh thổ" });
@@ -329,7 +329,7 @@ router.post("/api/npc-elections/vote/:worldSlug", isAuthenticated, async (req, r
 ════════════════════════════════════════ */
 router.post("/api/npc-elections/resolve/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const terrIds = terrs.map(t => t.id);
@@ -437,15 +437,15 @@ router.post("/api/npc-elections/resolve/:worldSlug", isAuthenticated, async (req
 ════════════════════════════════════════ */
 router.post("/api/npc-elections/auto-election/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const openRes    = await fetch(`http://localhost:8080/api/npc-elections/open/${worldSlug}`,    { method: "POST", headers: { cookie: req.headers.cookie ?? "" } });
     const voteRes    = await fetch(`http://localhost:8080/api/npc-elections/vote/${worldSlug}`,    { method: "POST", headers: { cookie: req.headers.cookie ?? "" } });
     const resolveRes = await fetch(`http://localhost:8080/api/npc-elections/resolve/${worldSlug}`, { method: "POST", headers: { cookie: req.headers.cookie ?? "" } });
 
-    const openJ    = await openRes.json();
-    const voteJ    = await voteRes.json();
-    const resolveJ = await resolveRes.json();
+    const openJ    = await openRes.json() as any;
+    const voteJ    = await voteRes.json() as any;
+    const resolveJ = await resolveRes.json() as any;
 
     return res.json({
       ok:      true,

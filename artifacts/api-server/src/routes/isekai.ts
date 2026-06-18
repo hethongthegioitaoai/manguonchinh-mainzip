@@ -51,7 +51,7 @@ router.get("/api/isekai/record/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [record] = await db.select().from(isekaiRecords)
-      .where(and(eq(isekaiRecords.id, req.params.id), eq(isekaiRecords.userId, userId)));
+      .where(and(eq(isekaiRecords.id, req.params.id as string), eq(isekaiRecords.userId, userId)));
     if (!record) return res.status(404).json({ error: "Không tìm thấy" });
     res.json(record);
   } catch (err) {

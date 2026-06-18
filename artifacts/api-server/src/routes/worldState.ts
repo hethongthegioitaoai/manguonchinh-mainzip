@@ -107,7 +107,7 @@ async function seedWorldDefaults(worldSlug: string): Promise<void> {
 // GET /world/state/:worldSlug — full world state (public)
 router.get("/world/state/:worldSlug", async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     await seedWorldDefaults(worldSlug);
 
     const stateRows = await db.select().from(worldState).where(eq(worldState.worldSlug, worldSlug));
@@ -170,7 +170,7 @@ router.get("/world/state/:worldSlug", async (req, res) => {
 // POST /world/boss/:worldSlug/:bossKey/kill — đánh dấu boss đã chết (sau battle thắng)
 router.post("/world/boss/:worldSlug/:bossKey/kill", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug, bossKey } = req.params;
+    const { worldSlug, bossKey } = req.params as Record<string, string>;
     const RESPAWN_HOURS = 24;
 
     const [row] = await db.select().from(worldState)
@@ -201,7 +201,7 @@ router.post("/world/boss/:worldSlug/:bossKey/kill", isAuthenticated, async (req,
 // POST /world/resources/:worldSlug/harvest — thu thập tài nguyên
 router.post("/world/resources/:worldSlug/harvest", isAuthenticated, async (req: any, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { resourceType, amount = 10 } = req.body;
 
     if (!resourceType) return res.status(400).json({ message: "Thiếu resourceType" });

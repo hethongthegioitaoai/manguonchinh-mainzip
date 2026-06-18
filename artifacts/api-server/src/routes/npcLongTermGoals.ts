@@ -109,7 +109,7 @@ function goalMemory(goalType: string, npc: typeof npcCores.$inferSelect, progres
 ════════════════════════════════════════ */
 router.get("/api/npc-goals/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const goals = await db.select().from(npcLongTermGoals)
       .where(eq(npcLongTermGoals.npcId, npcId))
       .orderBy(desc(npcLongTermGoals.priority), desc(npcLongTermGoals.createdAt));
@@ -122,7 +122,7 @@ router.get("/api/npc-goals/:npcId", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-goals/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(eq(npcCores.worldSlug, worldSlug));
     const results = await Promise.all(npcs.map(async (npc) => {
       const goals = await db.select().from(npcLongTermGoals)
@@ -139,7 +139,7 @@ router.get("/api/npc-goals/world/:worldSlug", isAuthenticated, async (req, res) 
 ════════════════════════════════════════ */
 router.post("/api/npc-goals/auto-generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length === 0) return res.json({ message: "Không có NPC", generated: 0 });
 
@@ -182,7 +182,7 @@ router.post("/api/npc-goals/auto-generate/:worldSlug", isAuthenticated, async (r
 ════════════════════════════════════════ */
 router.post("/api/npc-goals/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length === 0) return res.json({ message: "Không có NPC", completed: 0, advanced: 0 });
 
@@ -257,7 +257,7 @@ router.post("/api/npc-goals/tick/:worldSlug", isAuthenticated, async (req, res) 
 ════════════════════════════════════════ */
 router.get("/api/npc-goals/summary/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug));
     const npcIds = npcs.map((n) => n.id);
     if (npcIds.length === 0) return res.json({ total: 0, active: 0, completed: 0, byType: {} });

@@ -72,7 +72,7 @@ async function seedBooths(fairId: string) {
     await db.insert(fairBooths).values({
       fairId, worldSlug: w.slug, worldName: w.name,
       boothName, entryFee: ENTRY_FEE,
-      ownerId: w.creatorId, ownerName: w.creatorName ?? "Thương Nhân Ẩn Danh",
+      ownerId: w.createdBy, ownerName: "Ẩn Danh",
     }).onConflictDoNothing();
   }
 }
@@ -129,7 +129,7 @@ router.get("/api/fair/history", isAuthenticated, async (req, res) => {
 router.post("/api/fair/visit/:boothId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { boothId } = req.params;
+    const { boothId } = req.params as Record<string, string>;
 
     const [booth] = await db.select().from(fairBooths).where(eq(fairBooths.id, boothId));
     if (!booth) return res.status(404).json({ message: "Không tìm thấy gian hàng" });
@@ -143,9 +143,9 @@ router.post("/api/fair/visit/:boothId", isAuthenticated, async (req, res) => {
     if (alreadyVisited.length > 0) return res.status(400).json({ message: "Bạn đã tham quan gian hàng này rồi" });
 
     const fee = booth.entryFee;
-    if ((char.gold ?? 0) < fee) return res.status(400).json({ message: `Cần ${fee} gold để vào` });
+    if (((char.stats as any)?.gold ?? 0) < fee) return res.status(400).json({ message: `Cần ${fee} gold để vào` });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - fee }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - fee } }).where(eq(characters.id, char.id));
 
     if (!booth.aiNarrative) {
       try {
@@ -181,7 +181,7 @@ router.post("/api/fair/visit/:boothId", isAuthenticated, async (req, res) => {
 router.post("/api/fair/vote/:boothId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { boothId } = req.params;
+    const { boothId } = req.params as Record<string, string>;
 
     const [visited] = await db.select().from(fairVisits).where(
       and(eq(fairVisits.boothId, boothId), eq(fairVisits.userId, userId))
@@ -206,7 +206,7 @@ router.post("/api/fair/register", isAuthenticated, async (req, res) => {
     const userId = (req as any).userId;
     const fair = await getOrCreateActiveFair();
 
-    const myWorld = await db.select().from(customWorlds).where(and(eq(customWorlds.creatorId, userId), eq(customWorlds.isPublic, true))).limit(1);
+    const myWorld = await db.select().from(customWorlds).where(and(eq(customWorlds.createdBy, userId), eq(customWorlds.isPublic, true))).limit(1);
     if (!myWorld.length) return res.status(400).json({ message: "Bạn cần có thế giới công khai để đăng ký" });
 
     const w = myWorld[0];
@@ -217,7 +217,7 @@ router.post("/api/fair/register", isAuthenticated, async (req, res) => {
     const [booth] = await db.insert(fairBooths).values({
       fairId: fair.id, worldSlug: w.slug, worldName: w.name,
       boothName, entryFee: ENTRY_FEE,
-      ownerId: userId, ownerName: w.creatorName ?? "Ẩn Danh",
+      ownerId: userId, ownerName: "Ẩn Danh",
     }).returning();
 
     res.json({ booth, message: `Đã đăng ký gian hàng "${boothName}" thành công!` });

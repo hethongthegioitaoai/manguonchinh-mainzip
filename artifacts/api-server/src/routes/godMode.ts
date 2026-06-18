@@ -2,7 +2,7 @@ import { Router } from "express";
 import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { divineActions, npcPrayers, npcs, customWorlds, worldEvents, worldPopulationLog, worldAutoEvents, characters, worldFrameworks } from "@workspace/db/schema";
-import { eq, and, desc, gte, avg, sum, count } from "drizzle-orm";
+import { eq, and, desc, gte, avg, sum, count, sql } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const router = Router();
@@ -26,7 +26,7 @@ router.get("/api/god/my-worlds", isAuthenticated, async (req, res) => {
 router.get("/api/god/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const [world] = await db.select().from(customWorlds)
       .where(and(eq(customWorlds.slug, worldSlug), eq(customWorlds.createdBy, userId)));
@@ -51,7 +51,7 @@ router.get("/api/god/world/:worldSlug", isAuthenticated, async (req, res) => {
 router.post("/api/god/prayers/generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const [world] = await db.select().from(customWorlds)
       .where(and(eq(customWorlds.slug, worldSlug), eq(customWorlds.createdBy, userId)));
@@ -102,7 +102,7 @@ Chỉ trả về lời cầu nguyện, không giải thích.`;
 router.post("/api/god/intervene/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { command } = req.body;
     if (!command?.trim()) return res.status(400).json({ error: "Thiếu lệnh thần" });
 
@@ -157,7 +157,7 @@ Hãy diễn giải lệnh này thành một SỰ KIỆN THẦN THÁNH xảy ra t
 router.post("/api/god/bless/:npcId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
 
     const [npc] = await db.select().from(npcs).where(eq(npcs.id, npcId));
     if (!npc) return res.status(404).json({ error: "NPC không tồn tại" });
@@ -197,7 +197,7 @@ router.post("/api/god/bless/:npcId", isAuthenticated, async (req, res) => {
 router.post("/api/god/smite/:npcId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const { permanent } = req.body;
 
     const [npc] = await db.select().from(npcs).where(eq(npcs.id, npcId));
@@ -249,7 +249,7 @@ router.post("/api/god/smite/:npcId", isAuthenticated, async (req, res) => {
 router.post("/api/god/answer-prayer/:prayerId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { prayerId } = req.params;
+    const { prayerId } = req.params as Record<string, string>;
     const { answer } = req.body;
     if (!answer?.trim()) return res.status(400).json({ error: "Thiếu câu trả lời" });
 
@@ -292,7 +292,7 @@ router.post("/api/god/answer-prayer/:prayerId", isAuthenticated, async (req, res
 router.get("/api/god/observe/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const [world] = await db.select().from(customWorlds)
       .where(and(eq(customWorlds.slug, worldSlug), eq(customWorlds.createdBy, userId)));
@@ -304,9 +304,9 @@ router.get("/api/god/observe/:worldSlug", isAuthenticated, async (req, res) => {
 
     const [playerStats] = await db.select({
       playerCount: count(),
-      totalGold: sum(characters.gold),
+      totalGold: sql<number>`COALESCE(SUM((stats->>'gold')::numeric), 0)`,
       avgLevel: avg(characters.level),
-    }).from(characters).where(eq(characters.currentWorld, worldSlug));
+    }).from(characters).where(sql`stats->>'world_slug' = ${worldSlug}`);
 
     const activeEvs = await db.select().from(worldEvents)
       .where(and(eq(worldEvents.worldSlug, worldSlug), eq(worldEvents.active, true)))
@@ -369,7 +369,7 @@ router.get("/api/god/observe/:worldSlug", isAuthenticated, async (req, res) => {
 router.get("/api/god/population-history/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const [world] = await db.select().from(customWorlds)
       .where(and(eq(customWorlds.slug, worldSlug), eq(customWorlds.createdBy, userId)));
@@ -390,7 +390,7 @@ router.get("/api/god/population-history/:worldSlug", isAuthenticated, async (req
 router.post("/api/god/macro-intervene/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { interventionType } = req.body;
 
     const TYPES: Record<string, string> = {
@@ -460,7 +460,7 @@ Chỉ trả về mô tả sự kiện, không giải thích.`;
 router.get("/api/god/auto-events/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [world] = await db.select().from(customWorlds)
       .where(and(eq(customWorlds.slug, worldSlug), eq(customWorlds.createdBy, userId)));
     if (!world) return res.status(403).json({ error: "Không có quyền" });

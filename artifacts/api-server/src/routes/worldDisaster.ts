@@ -53,7 +53,7 @@ async function settleExpiredDisasters() {
 router.get("/api/disasters/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     await settleExpiredDisasters();
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const events = await db.select().from(worldDisasters)
       .where(and(eq(worldDisasters.worldSlug, worldSlug), eq(worldDisasters.status, "active")))
       .orderBy(desc(worldDisasters.startedAt));
@@ -79,7 +79,7 @@ router.get("/api/disasters/all/active", isAuthenticated, async (_req, res) => {
 ───────────────────────────────────────────────────── */
 router.get("/api/disasters/history/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const events = await db.select().from(worldDisasters)
       .where(eq(worldDisasters.worldSlug, worldSlug))
       .orderBy(desc(worldDisasters.startedAt)).limit(20);
@@ -92,7 +92,7 @@ router.get("/api/disasters/history/:worldSlug", isAuthenticated, async (req, res
 ───────────────────────────────────────────────────── */
 router.post("/api/disasters/trigger/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { templateId, forceType } = z.object({
       templateId: z.string().optional(),
       forceType:  z.enum(["disaster", "blessing"]).optional(),
@@ -140,7 +140,7 @@ router.post("/api/disasters/trigger/:worldSlug", isAuthenticated, async (req, re
 router.post("/api/disasters/:disasterId/pray", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { disasterId } = req.params;
+    const { disasterId } = req.params as Record<string, string>;
     const { characterId, prayerText } = z.object({
       characterId: z.string().uuid(),
       prayerText:  z.string().default(""),
@@ -218,7 +218,7 @@ router.post("/api/disasters/:disasterId/pray", isAuthenticated, async (req, res)
 ───────────────────────────────────────────────────── */
 router.get("/api/disasters/effect/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const active = await db.select().from(worldDisasters)
       .where(and(eq(worldDisasters.worldSlug, worldSlug), eq(worldDisasters.status, "active")));
 

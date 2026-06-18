@@ -91,7 +91,7 @@ router.get("/api/npc-policy/catalog", isAuthenticated, async (_req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-policy/active/:govId", isAuthenticated, async (req, res) => {
   try {
-    const { govId } = req.params;
+    const { govId } = req.params as Record<string, string>;
 
     const activePolicies = await db
       .select({
@@ -123,7 +123,7 @@ router.get("/api/npc-policy/active/:govId", isAuthenticated, async (req, res) =>
 ════════════════════════════════════════ */
 router.post("/api/npc-policy/activate/:govId/:policyId", isAuthenticated, async (req, res) => {
   try {
-    const { govId, policyId } = req.params;
+    const { govId, policyId } = req.params as Record<string, string>;
 
     const [gov] = await db.select().from(npcGovernments).where(eq(npcGovernments.id, govId));
     if (!gov) return res.status(404).json({ error: "Không tìm thấy chính phủ" });
@@ -167,7 +167,7 @@ router.post("/api/npc-policy/activate/:govId/:policyId", isAuthenticated, async 
 ════════════════════════════════════════ */
 router.delete("/api/npc-policy/deactivate/:govId/:policyId", isAuthenticated, async (req, res) => {
   try {
-    const { govId, policyId } = req.params;
+    const { govId, policyId } = req.params as Record<string, string>;
 
     const [gov] = await db.select().from(npcGovernments).where(eq(npcGovernments.id, govId));
     if (!gov) return res.status(404).json({ error: "Không tìm thấy chính phủ" });
@@ -211,7 +211,7 @@ router.delete("/api/npc-policy/deactivate/:govId/:policyId", isAuthenticated, as
 ════════════════════════════════════════ */
 router.post("/api/npc-policy/auto-decide/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     if (terrs.length === 0) return res.json({ decisions: 0, message: "Không có lãnh thổ" });
@@ -301,7 +301,7 @@ router.post("/api/npc-policy/auto-decide/:worldSlug", isAuthenticated, async (re
 ════════════════════════════════════════ */
 router.post("/api/npc-policy/apply-tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     await applyGovernmentPolicies(worldSlug);
     return res.json({ ok: true, message: "Đã áp dụng chính sách tick." });
   } catch (err) {

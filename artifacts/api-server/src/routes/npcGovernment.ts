@@ -39,7 +39,7 @@ function govTypeForTerritory(type: string, population: number): string {
 ════════════════════════════════════════ */
 router.get("/api/npc-government/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories)
       .where(eq(territories.worldSlug, worldSlug));
@@ -91,7 +91,7 @@ router.get("/api/npc-government/:worldSlug", isAuthenticated, async (req, res) =
 ════════════════════════════════════════ */
 router.post("/api/npc-government/establish/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories)
       .where(eq(territories.worldSlug, worldSlug));
@@ -175,7 +175,7 @@ router.post("/api/npc-government/establish/:worldSlug", isAuthenticated, async (
 ════════════════════════════════════════ */
 router.post("/api/npc-government/collect-taxes/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories)
       .where(eq(territories.worldSlug, worldSlug));
@@ -249,7 +249,7 @@ router.post("/api/npc-government/collect-taxes/:worldSlug", isAuthenticated, asy
 ════════════════════════════════════════ */
 router.post("/api/npc-government/update-approval/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories)
       .where(eq(territories.worldSlug, worldSlug));

@@ -14,7 +14,7 @@ router.get("/api/citizenship/worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const worlds = await db.select().from(customWorlds)
-      .where(and(eq(customWorlds.isPublic, true), ne(customWorlds.creatorId, userId)))
+      .where(and(eq(customWorlds.isPublic, true), ne(customWorlds.createdBy, userId)))
       .limit(20);
 
     const result = await Promise.all(worlds.map(async (w) => {
@@ -47,12 +47,12 @@ router.get("/api/citizenship/my", isAuthenticated, async (req, res) => {
 router.post("/api/citizenship/apply/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { applicationNote } = z.object({ applicationNote: z.string().max(500).optional() }).parse(req.body);
 
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, worldSlug));
     if (!world) return res.status(404).json({ message: "Không tìm thấy thế giới" });
-    if (world.creatorId === userId) return res.status(400).json({ message: "Bạn không thể xin quốc tịch thế giới của mình" });
+    if (world.createdBy === userId) return res.status(400).json({ message: "Bạn không thể xin quốc tịch thế giới của mình" });
 
     const existing = await db.select().from(citizenships).where(
       and(eq(citizenships.userId, userId), eq(citizenships.worldSlug, worldSlug))
@@ -89,9 +89,9 @@ router.post("/api/citizenship/apply/:worldSlug", isAuthenticated, async (req, re
 router.get("/api/citizenship/applications/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, worldSlug));
-    if (!world || world.creatorId !== userId) return res.status(403).json({ message: "Không có quyền" });
+    if (!world || world.createdBy !== userId) return res.status(403).json({ message: "Không có quyền" });
 
     const apps = await db.select().from(citizenships)
       .where(eq(citizenships.worldSlug, worldSlug))
@@ -106,14 +106,14 @@ router.get("/api/citizenship/applications/:worldSlug", isAuthenticated, async (r
 router.post("/api/citizenship/approve/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
     const { approvalNote } = z.object({ approvalNote: z.string().max(300).optional() }).parse(req.body);
 
     const [cit] = await db.select().from(citizenships).where(eq(citizenships.id, id));
     if (!cit) return res.status(404).json({ message: "Không tìm thấy đơn" });
 
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, cit.worldSlug));
-    if (!world || world.creatorId !== userId) return res.status(403).json({ message: "Không có quyền" });
+    if (!world || world.createdBy !== userId) return res.status(403).json({ message: "Không có quyền" });
 
     const [updated] = await db.update(citizenships).set({
       status: "approved", approvalNote: approvalNote ?? "Chào mừng công dân mới!",
@@ -130,13 +130,13 @@ router.post("/api/citizenship/approve/:id", isAuthenticated, async (req, res) =>
 router.post("/api/citizenship/revoke/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
 
     const [cit] = await db.select().from(citizenships).where(eq(citizenships.id, id));
     if (!cit) return res.status(404).json({ message: "Không tìm thấy" });
 
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, cit.worldSlug));
-    const isOwner = world?.creatorId === userId;
+    const isOwner = world?.createdBy === userId;
     const isSelf = cit.userId === userId;
     if (!isOwner && !isSelf) return res.status(403).json({ message: "Không có quyền" });
 
@@ -152,7 +152,7 @@ router.post("/api/citizenship/revoke/:id", isAuthenticated, async (req, res) => 
 router.post("/api/citizenship/pay-tax/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const [cit] = await db.select().from(citizenships).where(
       and(eq(citizenships.userId, userId), eq(citizenships.worldSlug, worldSlug), eq(citizenships.status, "approved"))
@@ -163,9 +163,9 @@ router.post("/api/citizenship/pay-tax/:worldSlug", isAuthenticated, async (req, 
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
 
     const tax = cit.annualTax;
-    if ((char.gold ?? 0) < tax) return res.status(400).json({ message: `Cần ${tax} gold để nộp thuế` });
+    if (((char.stats as any)?.gold ?? 0) < tax) return res.status(400).json({ message: `Cần ${tax} gold để nộp thuế` });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - tax }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - tax } }).where(eq(characters.id, char.id));
     const [updated] = await db.update(citizenships).set({ taxPaidAt: new Date() }).where(eq(citizenships.id, cit.id)).returning();
 
     res.json({ citizenship: updated, message: `Đã nộp ${tax} gold thuế thường niên!` });
@@ -178,7 +178,7 @@ router.post("/api/citizenship/pay-tax/:worldSlug", isAuthenticated, async (req, 
 router.post("/api/citizenship/benefits/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const body = z.object({
       tradeTaxDiscount: z.number().int().min(0).max(50).optional(),
       maxCitizens: z.number().int().min(1).max(500).optional(),
@@ -187,7 +187,7 @@ router.post("/api/citizenship/benefits/:worldSlug", isAuthenticated, async (req,
     }).parse(req.body);
 
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, worldSlug));
-    if (!world || world.creatorId !== userId) return res.status(403).json({ message: "Không có quyền" });
+    if (!world || world.createdBy !== userId) return res.status(403).json({ message: "Không có quyền" });
 
     const existing = await db.select().from(citizenshipBenefits).where(eq(citizenshipBenefits.worldSlug, worldSlug));
     let result;

@@ -10,7 +10,7 @@ export const npcCores = pgTable("npc_cores", {
   energy: integer("energy").notNull().default(100),
   hunger: integer("hunger").notNull().default(0),
   happiness: integer("happiness").notNull().default(70),
-  currentGoal: text("current_goal").default(null),
+  currentGoal: text("current_goal"),
   lifeStage: varchar("life_stage", { length: 16 }).notNull().default("adult"),
   tickCount: integer("tick_count").notNull().default(0),
   active: integer("active").notNull().default(1),

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { bankAccounts, bankLoans, bankTransfers, characters, worldRelations } from "@workspace/db/schema";
-import { eq, and, or, sql, desc, lt } from "drizzle-orm";
+import { eq, and, or, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 
 const router = Router();
@@ -11,6 +11,24 @@ const INTEREST_RATE_DAILY = 0.02;   // 2%/ngày tiết kiệm
 const LOAN_RATE_DAILY = 0.05;       // 5%/ngày vay
 const TRANSFER_FEE_PCT = 0.05;      // 5% phí chuyển khoản
 const TRANSFER_FIXED_FEE = 10;       // + 10 gold cố định
+
+// ─── Helpers — gold/worldSlug sống trong char.stats JSON ─────────────────────
+
+function getCharGold(char: { stats: unknown }): number {
+  return (char.stats as any)?.gold ?? 0;
+}
+
+function getCharWorldSlug(char: { stats: unknown }): string {
+  return (char.stats as any)?.world_slug ?? "cultivation";
+}
+
+async function setCharGold(charId: string, stats: unknown, newGold: number) {
+  await db.update(characters)
+    .set({ stats: { ...(stats as object), gold: newGold } })
+    .where(eq(characters.id, charId));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function getOrCreateAccount(characterId: string, worldSlug: string, charName: string) {
   const [existing] = await db.select().from(bankAccounts).where(eq(bankAccounts.characterId, characterId));
@@ -45,7 +63,7 @@ router.get("/api/bank/account", isAuthenticated, async (req, res) => {
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.json(null);
 
-    let account = await getOrCreateAccount(char.id, char.worldSlug, char.name);
+    let account = await getOrCreateAccount(char.id, getCharWorldSlug(char), char.name);
     account = await applyInterest(account);
 
     const loans = await db.select().from(bankLoans)
@@ -70,13 +88,11 @@ router.get("/api/bank/rates", isAuthenticated, async (_req, res) => {
       { slug: "wasteland", currency: "Phế Liệu",   symbol: "⬡" },
     ];
 
-    // Thêm custom worlds
     const customWorldsResult = await db.execute(sql`SELECT slug, name FROM custom_worlds LIMIT 20`);
     for (const w of customWorldsResult.rows as any[]) {
       worlds.push({ slug: w.slug, currency: `${w.name} Gold`, symbol: "⬡" });
     }
 
-    // Build rate matrix dựa trên quan hệ ngoại giao
     const relations = await db.select().from(worldRelations);
     const rates: Record<string, Record<string, number>> = {};
     for (const w of worlds) {
@@ -87,11 +103,10 @@ router.get("/api/bank/rates", isAuthenticated, async (_req, res) => {
           (r.worldSlugA === w.slug && r.worldSlugB === other.slug) ||
           (r.worldSlugB === w.slug && r.worldSlugA === other.slug)
         );
-        const base = 1.0;
         const statusBonus = rel?.status === "ally" ? 0.1 :
           rel?.status === "trade_partner" ? 0.05 :
           rel?.status === "enemy" ? -0.2 : 0;
-        rates[w.slug][other.slug] = Math.max(0.5, base + statusBonus);
+        rates[w.slug][other.slug] = Math.max(0.5, 1.0 + statusBonus);
       }
     }
 
@@ -109,11 +124,13 @@ router.post("/api/bank/deposit", isAuthenticated, async (req, res) => {
 
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
-    if ((char.gold ?? 0) < amount) return res.status(400).json({ message: "Không đủ gold" });
 
-    const account = await getOrCreateAccount(char.id, char.worldSlug, char.name);
+    const currentGold = getCharGold(char);
+    if (currentGold < amount) return res.status(400).json({ message: "Không đủ gold" });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - amount }).where(eq(characters.id, char.id));
+    const account = await getOrCreateAccount(char.id, getCharWorldSlug(char), char.name);
+
+    await setCharGold(char.id, char.stats, currentGold - amount);
     const [updated] = await db.update(bankAccounts)
       .set({ balance: account.balance + amount, totalDeposited: account.totalDeposited + amount })
       .where(eq(bankAccounts.id, account.id)).returning();
@@ -133,12 +150,12 @@ router.post("/api/bank/withdraw", isAuthenticated, async (req, res) => {
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
 
-    let account = await getOrCreateAccount(char.id, char.worldSlug, char.name);
+    let account = await getOrCreateAccount(char.id, getCharWorldSlug(char), char.name);
     account = await applyInterest(account);
 
     if (account.balance < amount) return res.status(400).json({ message: "Số dư không đủ" });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) + amount }).where(eq(characters.id, char.id));
+    await setCharGold(char.id, char.stats, getCharGold(char) + amount);
     const [updated] = await db.update(bankAccounts)
       .set({ balance: account.balance - amount, totalWithdrawn: account.totalWithdrawn + amount })
       .where(eq(bankAccounts.id, account.id)).returning();
@@ -158,25 +175,25 @@ router.post("/api/bank/loan", isAuthenticated, async (req, res) => {
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
 
-    const account = await getOrCreateAccount(char.id, char.worldSlug, char.name);
+    const worldSlug = getCharWorldSlug(char);
+    const account = await getOrCreateAccount(char.id, worldSlug, char.name);
     const maxLoan = account.balance * 5;
     if (amount > maxLoan) return res.status(400).json({ message: `Vay tối đa ${maxLoan} (500% số dư)` });
 
-    // Kiểm tra không có loan đang active
     const existing = await db.select().from(bankLoans)
       .where(and(eq(bankLoans.characterId, char.id), eq(bankLoans.status, "active")));
     if (existing.length >= 3) return res.status(400).json({ message: "Tối đa 3 khoản vay cùng lúc" });
 
-    const totalOwed = Math.floor(amount * 1.3); // 30% lãi trả sau
-    const dueAt = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 ngày
+    const totalOwed = Math.floor(amount * 1.3);
+    const dueAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
 
     const [loan] = await db.insert(bankLoans).values({
-      characterId: char.id, worldSlug: char.worldSlug,
+      characterId: char.id, worldSlug,
       principal: amount, interestRate: LOAN_RATE_DAILY,
       totalOwed, dueAt,
     }).returning();
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) + amount }).where(eq(characters.id, char.id));
+    await setCharGold(char.id, char.stats, getCharGold(char) + amount);
 
     res.status(201).json({ loan, message: `Đã vay ${amount} gold. Phải trả ${totalOwed} trong 7 ngày.` });
   } catch (err) { res.status(500).json({ message: "Lỗi server" }); }
@@ -188,7 +205,7 @@ router.post("/api/bank/loan", isAuthenticated, async (req, res) => {
 router.post("/api/bank/repay/:loanId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { loanId } = req.params;
+    const { loanId } = req.params as Record<string, string>;
 
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
@@ -197,9 +214,10 @@ router.post("/api/bank/repay/:loanId", isAuthenticated, async (req, res) => {
     if (!loan || loan.status !== "active") return res.status(400).json({ message: "Khoản vay không tồn tại" });
     if (loan.characterId !== char.id) return res.status(403).json({ message: "Không phải khoản vay của bạn" });
 
-    if ((char.gold ?? 0) < loan.totalOwed) return res.status(400).json({ message: `Cần ${loan.totalOwed} gold để trả hết` });
+    const currentGold = getCharGold(char);
+    if (currentGold < loan.totalOwed) return res.status(400).json({ message: `Cần ${loan.totalOwed} gold để trả hết` });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - loan.totalOwed }).where(eq(characters.id, char.id));
+    await setCharGold(char.id, char.stats, currentGold - loan.totalOwed);
     const [updated] = await db.update(bankLoans)
       .set({ status: "paid", paidAt: new Date() }).where(eq(bankLoans.id, loanId)).returning();
 
@@ -226,16 +244,18 @@ router.post("/api/bank/transfer", isAuthenticated, async (req, res) => {
     if (!toChar) return res.status(404).json({ message: "Nhân vật đích không tồn tại" });
     if (fromChar.id === toChar.id) return res.status(400).json({ message: "Không thể chuyển cho chính mình" });
 
-    const fromAccount = await getOrCreateAccount(fromChar.id, fromChar.worldSlug, fromChar.name);
-    const toAccount = await getOrCreateAccount(toChar.id, toChar.worldSlug, toChar.name);
+    const fromWorldSlug = getCharWorldSlug(fromChar);
+    const toWorldSlug   = getCharWorldSlug(toChar);
 
-    const isCrossWorld = fromChar.worldSlug !== toChar.worldSlug;
+    const fromAccount = await getOrCreateAccount(fromChar.id, fromWorldSlug, fromChar.name);
+    const toAccount   = await getOrCreateAccount(toChar.id, toWorldSlug, toChar.name);
+
+    const isCrossWorld = fromWorldSlug !== toWorldSlug;
     const fee = isCrossWorld ? Math.floor(amount * TRANSFER_FEE_PCT) + TRANSFER_FIXED_FEE : 0;
     const totalCost = amount + fee;
 
     if (fromAccount.balance < totalCost) return res.status(400).json({ message: `Cần ${totalCost} gold (gồm ${fee} phí)` });
 
-    // Tỷ giá dựa trên quan hệ (simplified: 1:1 nếu cùng thế giới)
     const exchangeRate = 1.0;
     const received = Math.floor(amount * exchangeRate);
 

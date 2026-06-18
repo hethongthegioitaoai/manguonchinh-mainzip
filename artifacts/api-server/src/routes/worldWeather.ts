@@ -82,7 +82,7 @@ Chỉ JSON, không markdown.`;
 router.get("/api/weather/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     await expireOldWeather();
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     let current = await db.select().from(worldWeather)
       .where(and(eq(worldWeather.worldSlug, worldSlug), eq(worldWeather.isActive, true)))
@@ -125,7 +125,7 @@ router.get("/api/weather/all/active", isAuthenticated, async (req, res) => {
 ───────────────────────────────────────────────────── */
 router.post("/api/weather/generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { worldName, force } = req.body as { worldName?: string; force?: boolean };
 
     await expireOldWeather();

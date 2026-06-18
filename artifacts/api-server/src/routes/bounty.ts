@@ -92,7 +92,7 @@ router.post("/api/bounties/post", isAuthenticated, async (req, res) => {
     const [target] = await db.select().from(characters).where(eq(characters.id, targetCharId));
     if (!target) return res.status(404).json({ message: "Nhân vật đích không tồn tại" });
 
-    if ((char.gold ?? 0) < reward) return res.status(400).json({ message: "Không đủ gold" });
+    if (((char.stats as any)?.gold ?? 0) < reward) return res.status(400).json({ message: "Không đủ gold" });
 
     // Giới hạn active
     const existing = await db.select().from(bounties)
@@ -102,13 +102,13 @@ router.post("/api/bounties/post", isAuthenticated, async (req, res) => {
     }
 
     // Trừ gold
-    await db.update(characters).set({ gold: (char.gold ?? 0) - reward }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - reward } }).where(eq(characters.id, char.id));
 
     const expiresAt = new Date(Date.now() + EXPIRE_DAYS * 24 * 3600 * 1000);
     const [bounty] = await db.insert(bounties).values({
       postedByCharId: char.id, postedByName: char.name,
       targetCharId, targetCharName: target.name,
-      targetWorldSlug: target.worldSlug,
+      targetWorldSlug: (target.stats as any)?.world_slug ?? "cultivation",
       reward, reason, expiresAt,
     }).returning();
 
@@ -122,7 +122,7 @@ router.post("/api/bounties/post", isAuthenticated, async (req, res) => {
 router.post("/api/bounties/claim/:bountyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { bountyId } = req.params;
+    const { bountyId } = req.params as Record<string, string>;
     const { note } = z.object({ note: z.string().default("") }).parse(req.body);
 
     const [bounty] = await db.select().from(bounties).where(eq(bounties.id, bountyId));
@@ -140,7 +140,7 @@ router.post("/api/bounties/claim/:bountyId", isAuthenticated, async (req, res) =
     }).returning();
 
     // Cộng tiền cho claimer
-    await db.update(characters).set({ gold: (char.gold ?? 0) + bounty.reward }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) + bounty.reward } }).where(eq(characters.id, char.id));
 
     // Đánh dấu bounty đã được claim
     await db.update(bounties)
@@ -157,7 +157,7 @@ router.post("/api/bounties/claim/:bountyId", isAuthenticated, async (req, res) =
 router.delete("/api/bounties/:bountyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { bountyId } = req.params;
+    const { bountyId } = req.params as Record<string, string>;
 
     const [bounty] = await db.select().from(bounties).where(eq(bounties.id, bountyId));
     if (!bounty || bounty.status !== "active") return res.status(400).json({ message: "Bounty không còn active" });
@@ -166,7 +166,7 @@ router.delete("/api/bounties/:bountyId", isAuthenticated, async (req, res) => {
     if (!char || char.id !== bounty.postedByCharId) return res.status(403).json({ message: "Không phải bounty của bạn" });
 
     const refund = Math.floor(bounty.reward * (1 - CANCEL_PENALTY_PCT));
-    await db.update(characters).set({ gold: (char.gold ?? 0) + refund }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) + refund } }).where(eq(characters.id, char.id));
     await db.update(bounties).set({ status: "cancelled" }).where(eq(bounties.id, bountyId));
 
     res.json({ refund, message: `Đã hủy. Hoàn lại ${refund} gold (mất 50% penalty)` });

@@ -63,7 +63,7 @@ function genName(type: string): string {
 ════════════════════════════════════════ */
 router.get("/api/territories/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const rows = await db.select().from(territories)
       .where(eq(territories.worldSlug, worldSlug))
@@ -103,7 +103,7 @@ router.get("/api/territories/:worldSlug", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.post("/api/territories/seed/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const existing = await db.select({ id: territories.id }).from(territories).where(eq(territories.worldSlug, worldSlug));
     if (existing.length >= 5) {
@@ -151,7 +151,7 @@ router.post("/api/territories/seed/:worldSlug", isAuthenticated, async (req, res
 ════════════════════════════════════════ */
 router.post("/api/territories/:territoryId/claim", isAuthenticated, async (req, res) => {
   try {
-    const { territoryId } = req.params;
+    const { territoryId } = req.params as Record<string, string>;
     const { factionId } = req.body;
 
     if (!factionId) return res.status(400).json({ error: "Thiếu factionId" });
@@ -188,7 +188,7 @@ router.post("/api/territories/:territoryId/claim", isAuthenticated, async (req, 
 ════════════════════════════════════════ */
 router.post("/api/territories/harvest/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const rows = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     if (rows.length === 0) return res.json({ harvested: 0, message: "Chưa có lãnh thổ nào" });

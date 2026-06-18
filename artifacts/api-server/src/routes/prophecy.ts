@@ -40,7 +40,7 @@ Hãy tạo một LỜI TIÊN TRI cho thế giới này. Trả về JSON (không 
 // GET /api/prophecy/:worldSlug — xem tiên tri active + history
 router.get("/api/prophecy/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const active = await db.select().from(prophecies)
       .where(and(eq(prophecies.worldSlug, worldSlug), eq(prophecies.isActive, true)))
@@ -67,7 +67,7 @@ router.get("/api/prophecy/:worldSlug", isAuthenticated, async (req, res) => {
 router.post("/api/prophecy/generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     // Chỉ creator hoặc bất kỳ user nào với thế giới public được trigger
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, worldSlug));
@@ -109,7 +109,7 @@ const claimSchema = z.object({
 router.post("/api/prophecy/claim/:prophecyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { prophecyId } = req.params;
+    const { prophecyId } = req.params as Record<string, string>;
     const parsed = claimSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Dữ liệu không hợp lệ" });
     const { characterId, proof } = parsed.data;
@@ -195,7 +195,7 @@ Chỉ trả về số nguyên từ 0 đến 100.`;
 router.get("/api/prophecy/claims/:prophecyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { prophecyId } = req.params;
+    const { prophecyId } = req.params as Record<string, string>;
 
     const [prophecy] = await db.select().from(prophecies).where(eq(prophecies.id, prophecyId));
     if (!prophecy) return res.status(404).json({ error: "Tiên tri không tồn tại" });
@@ -223,7 +223,7 @@ router.get("/api/prophecy/claims/:prophecyId", isAuthenticated, async (req, res)
 router.post("/api/prophecy/judge/:claimId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { claimId } = req.params;
+    const { claimId } = req.params as Record<string, string>;
     const { approve } = req.body;
 
     const [claim] = await db.select().from(prophecyClaims).where(eq(prophecyClaims.id, claimId));

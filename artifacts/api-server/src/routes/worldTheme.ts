@@ -128,7 +128,7 @@ router.get("/api/world-theme/presets", isAuthenticated, async (_req, res) => {
 ───────────────────────────────────────────────────── */
 router.get("/api/world-theme/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [theme] = await db.select().from(worldThemes).where(eq(worldThemes.worldSlug, worldSlug));
     res.json(theme ?? null);
   } catch (err) { res.status(500).json({ message: "Lỗi server" }); }
@@ -155,7 +155,7 @@ router.post("/api/world-theme/generate", isAuthenticated, async (req, res) => {
 router.post("/api/world-theme/apply/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { themeInput, presetId, framework: providedFramework } = z.object({
       themeInput:        z.string().min(1),
       presetId:          z.string().optional(),

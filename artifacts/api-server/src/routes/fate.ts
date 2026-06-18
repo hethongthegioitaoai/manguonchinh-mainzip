@@ -77,10 +77,10 @@ router.get("/api/fate/char/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters)
-      .where(and(eq(characters.id, req.params.characterId), eq(characters.userId, userId)));
+      .where(and(eq(characters.id, String(req.params.characterId)), eq(characters.userId, userId)));
     if (!char) return res.status(403).json({ error: "Không có quyền" });
 
-    const fateNumber = calcFateNumber(char.name, char.level, new Date(char.createdAt));
+    const fateNumber = calcFateNumber(char.name, char.level, new Date(char.createdAt ?? Date.now()));
     const hexagram = HEXAGRAMS[(fateNumber - 1) % 8];
 
     // Active events
@@ -126,7 +126,7 @@ router.post("/api/fate/trigger/:characterId", isAuthenticated, async (req, res) 
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters)
-      .where(and(eq(characters.id, req.params.characterId), eq(characters.userId, userId)));
+      .where(and(eq(characters.id, String(req.params.characterId)), eq(characters.userId, userId)));
     if (!char) return res.status(403).json({ error: "Không có quyền" });
 
     // Cooldown: không trigger nếu đã có event trong 1h qua
@@ -136,7 +136,7 @@ router.post("/api/fate/trigger/:characterId", isAuthenticated, async (req, res) 
       .limit(1);
     if (recent) return res.status(429).json({ error: "Mệnh Cục đang hồi phục — cần ít nhất 1 giờ giữa các lần kích hoạt." });
 
-    const fateNumber = calcFateNumber(char.name, char.level, new Date(char.createdAt));
+    const fateNumber = calcFateNumber(char.name, char.level, new Date(char.createdAt ?? Date.now()));
     const eventType = rollEventType(fateNumber);
     const pool = EVENT_EFFECTS[eventType];
     const template = pool[Math.floor(Math.random() * pool.length)];
@@ -210,7 +210,7 @@ router.post("/api/fate/consult/:characterId", isAuthenticated, async (req, res) 
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters)
-      .where(and(eq(characters.id, req.params.characterId), eq(characters.userId, userId)));
+      .where(and(eq(characters.id, String(req.params.characterId)), eq(characters.userId, userId)));
     if (!char) return res.status(403).json({ error: "Không có quyền" });
 
     // Cooldown: 1 lần / 2 giờ
@@ -220,7 +220,7 @@ router.post("/api/fate/consult/:characterId", isAuthenticated, async (req, res) 
       .limit(1);
     if (recentReading) return res.status(429).json({ error: "Thiên Cơ không thể hỏi quá thường — chờ 2 giờ giữa các lần giải quẻ." });
 
-    const fateNumber = calcFateNumber(char.name, char.level, new Date(char.createdAt));
+    const fateNumber = calcFateNumber(char.name, char.level, new Date(char.createdAt ?? Date.now()));
     const hexIdx = (fateNumber - 1 + Math.floor(Math.random() * 3)) % 8;
     const hexagram = HEXAGRAMS[hexIdx];
     const charStats = char.stats as any;

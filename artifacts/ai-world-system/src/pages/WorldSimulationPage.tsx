@@ -60,18 +60,18 @@ function WorldCard({ worldSlug, worldName, color }: { worldSlug: string; worldNa
 
   const { data: state, isLoading: stateLoading } = useQuery<any>({
     queryKey: ["/api/simulation/state", worldSlug],
-    queryFn: () => fetch(`/api/simulation/state/${worldSlug}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/simulation/state/${worldSlug}`).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
     refetchInterval: 30_000,
   });
 
   const { data: logs = [] } = useQuery<any[]>({
     queryKey: ["/api/simulation/logs", worldSlug],
-    queryFn: () => fetch(`/api/simulation/logs/${worldSlug}?limit=5`).then(r => r.json()),
+    queryFn: () => fetch(`/api/simulation/logs/${worldSlug}?limit=5`).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
     refetchInterval: 30_000,
   });
 
   const tickMut = useMutation({
-    mutationFn: () => fetch(`/api/simulation/tick/${worldSlug}`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => fetch(`/api/simulation/tick/${worldSlug}`, { method: "POST" }).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/simulation/state", worldSlug] });
       queryClient.invalidateQueries({ queryKey: ["/api/simulation/logs", worldSlug] });
@@ -156,12 +156,12 @@ export default function WorldSimulationPage() {
 
   const { data: feed = [], isLoading: feedLoading } = useQuery<any[]>({
     queryKey: ["/api/simulation/feed"],
-    queryFn: () => fetch("/api/simulation/feed").then(r => r.json()),
+    queryFn: () => fetch("/api/simulation/feed").then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
     refetchInterval: 20_000,
   });
 
   const tickAllMut = useMutation({
-    mutationFn: () => fetch("/api/simulation/tick/all", { method: "POST" }).then(r => r.json()),
+    mutationFn: () => fetch("/api/simulation/tick/all", { method: "POST" }).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/simulation"] });
       toast({ title: "⚡ Tick toàn bộ thế giới xong!" });

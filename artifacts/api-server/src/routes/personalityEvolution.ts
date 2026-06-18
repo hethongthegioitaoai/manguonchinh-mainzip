@@ -298,7 +298,7 @@ export async function evolveNpcPersonality(npcId: string): Promise<{
 ════════════════════════════════════════ */
 router.post("/api/personality-evolution/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores)
       .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
 
@@ -334,7 +334,7 @@ router.post("/api/personality-evolution/tick/:worldSlug", isAuthenticated, async
 ════════════════════════════════════════ */
 router.post("/api/personality-evolution/evolve/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const result = await evolveNpcPersonality(npcId);
     return res.json(result);
   } catch (err) {
@@ -349,7 +349,7 @@ router.post("/api/personality-evolution/evolve/:npcId", isAuthenticated, async (
 ════════════════════════════════════════ */
 router.get("/api/personality-evolution/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
 
     const [npc] = await db.select().from(npcCores).where(eq(npcCores.id, npcId));
     if (!npc) return res.status(404).json({ message: "Không tìm thấy NPC" });
@@ -380,7 +380,7 @@ router.get("/api/personality-evolution/:npcId", isAuthenticated, async (req, res
 ════════════════════════════════════════ */
 router.get("/api/personality-evolution/dashboard/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const npcs = await db.select().from(npcCores)
       .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)))

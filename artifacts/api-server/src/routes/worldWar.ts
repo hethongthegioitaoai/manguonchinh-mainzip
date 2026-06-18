@@ -108,7 +108,7 @@ router.get("/api/world-war/history", isAuthenticated, async (_req, res) => {
 ───────────────────────────────────────────────────── */
 router.get("/api/world-war/:warId", isAuthenticated, async (req, res) => {
   try {
-    const { warId } = req.params;
+    const { warId } = req.params as Record<string, string>;
     const [war] = await db.select().from(worldWars).where(eq(worldWars.id, warId));
     if (!war) return res.status(404).json({ message: "Không tìm thấy chiến tranh" });
 
@@ -126,7 +126,7 @@ router.get("/api/world-war/:warId", isAuthenticated, async (req, res) => {
 router.post("/api/world-war/declare/:targetWorldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { targetWorldSlug } = req.params;
+    const { targetWorldSlug } = req.params as Record<string, string>;
     const { fromWorldSlug, reason } = z.object({
       fromWorldSlug: z.string().min(1),
       reason: z.string().default("Vì danh dự của thế giới!"),
@@ -273,7 +273,7 @@ router.post("/api/world-war/contribute", isAuthenticated, async (req, res) => {
 router.post("/api/world-war/:warId/surrender", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { warId } = req.params;
+    const { warId } = req.params as Record<string, string>;
     const { worldSlug } = z.object({ worldSlug: z.string().min(1) }).parse(req.body);
 
     const ownerCheck = await db.execute(
@@ -325,7 +325,7 @@ router.post("/api/world-war/:warId/surrender", isAuthenticated, async (req, res)
 ───────────────────────────────────────────────────── */
 router.post("/api/world-war/:warId/bulletin", isAuthenticated, async (req, res) => {
   try {
-    const { warId } = req.params;
+    const { warId } = req.params as Record<string, string>;
     const [war] = await db.select().from(worldWars).where(eq(worldWars.id, warId));
     if (!war || war.status !== "active") return res.status(400).json({ message: "Chiến tranh không active" });
 

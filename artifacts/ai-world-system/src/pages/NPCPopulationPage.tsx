@@ -164,7 +164,7 @@ export default function NPCPopulationPage() {
         </div>
 
         {/* NPC age list */}
-        {stats && stats.allNpcs.length > 0 && (
+        {stats && Array.isArray(stats.allNpcs) && stats.allNpcs.length > 0 && (
           <div className="rounded-xl border border-gray-800 bg-gray-900/20 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Users size={14} style={{ color: worldColor }} />

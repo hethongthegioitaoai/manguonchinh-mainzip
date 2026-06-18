@@ -61,7 +61,7 @@ function calcIncome(plot: any): number {
 ───────────────────────────────────────────────────── */
 router.get("/api/realestate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     await seedPlotsForWorld(worldSlug);
     const plots = await db.select().from(landPlots).where(eq(landPlots.worldSlug, worldSlug));
     res.json(plots);
@@ -88,7 +88,7 @@ router.get("/api/realestate/my-plots", isAuthenticated, async (req, res) => {
 router.post("/api/realestate/buy/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { plotId } = req.params;
+    const { plotId } = req.params as Record<string, string>;
 
     const [plot] = await db.select().from(landPlots).where(eq(landPlots.id, plotId));
     if (!plot) return res.status(404).json({ message: "Không tìm thấy đất" });
@@ -98,17 +98,17 @@ router.post("/api/realestate/buy/:plotId", isAuthenticated, async (req, res) => 
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
 
     const price = plot.salePrice ?? plot.purchasePrice;
-    if ((char.gold ?? 0) < price) return res.status(400).json({ message: `Cần ${price} gold` });
+    if (((char.stats as any)?.gold ?? 0) < price) return res.status(400).json({ message: `Cần ${price} gold` });
 
     // Hoàn tiền cho chủ cũ (nếu có)
     if (plot.ownerCharId) {
       const [oldOwner] = await db.select().from(characters).where(eq(characters.id, plot.ownerCharId));
       if (oldOwner) {
-        await db.update(characters).set({ gold: (oldOwner.gold ?? 0) + price }).where(eq(characters.id, oldOwner.id));
+        await db.update(characters).set({ stats: { ...(oldOwner.stats as any), gold: ((oldOwner.stats as any)?.gold ?? 0) + price } }).where(eq(characters.id, oldOwner.id));
       }
     }
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - price }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - price } }).where(eq(characters.id, char.id));
     const [updated] = await db.update(landPlots).set({
       ownerCharId: char.id, ownerCharName: char.name, ownerId: userId,
       isForSale: false, salePrice: null, purchasedAt: new Date(), lastCollectedAt: new Date(),
@@ -126,7 +126,7 @@ router.post("/api/realestate/buy/:plotId", isAuthenticated, async (req, res) => 
 router.post("/api/realestate/sell/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { plotId } = req.params;
+    const { plotId } = req.params as Record<string, string>;
     const { salePrice } = z.object({ salePrice: z.number().int().min(1) }).parse(req.body);
 
     const [plot] = await db.select().from(landPlots).where(eq(landPlots.id, plotId));
@@ -143,7 +143,7 @@ router.post("/api/realestate/sell/:plotId", isAuthenticated, async (req, res) =>
 router.post("/api/realestate/upgrade/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { plotId } = req.params;
+    const { plotId } = req.params as Record<string, string>;
 
     const [plot] = await db.select().from(landPlots).where(eq(landPlots.id, plotId));
     if (!plot || plot.ownerId !== userId) return res.status(403).json({ message: "Bạn không sở hữu đất này" });
@@ -151,9 +151,9 @@ router.post("/api/realestate/upgrade/:plotId", isAuthenticated, async (req, res)
 
     const upgradeCost = plot.purchasePrice * plot.upgradeLevel;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
-    if (!char || (char.gold ?? 0) < upgradeCost) return res.status(400).json({ message: `Cần ${upgradeCost} gold để nâng cấp` });
+    if (!char || ((char.stats as any)?.gold ?? 0) < upgradeCost) return res.status(400).json({ message: `Cần ${upgradeCost} gold để nâng cấp` });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) - upgradeCost }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) - upgradeCost } }).where(eq(characters.id, char.id));
     const [updated] = await db.update(landPlots)
       .set({ upgradeLevel: plot.upgradeLevel + 1 }).where(eq(landPlots.id, plotId)).returning();
 
@@ -169,7 +169,7 @@ router.post("/api/realestate/upgrade/:plotId", isAuthenticated, async (req, res)
 router.post("/api/realestate/collect/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { plotId } = req.params;
+    const { plotId } = req.params as Record<string, string>;
 
     const [plot] = await db.select().from(landPlots).where(eq(landPlots.id, plotId));
     if (!plot || plot.ownerId !== userId) return res.status(403).json({ message: "Bạn không sở hữu đất này" });
@@ -180,7 +180,7 @@ router.post("/api/realestate/collect/:plotId", isAuthenticated, async (req, res)
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
     if (!char) return res.status(404).json({ message: "Không tìm thấy nhân vật" });
 
-    await db.update(characters).set({ gold: (char.gold ?? 0) + income }).where(eq(characters.id, char.id));
+    await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) + income } }).where(eq(characters.id, char.id));
     const [updated] = await db.update(landPlots).set({ lastCollectedAt: new Date() }).where(eq(landPlots.id, plotId)).returning();
 
     await db.insert(landTransactions).values({ plotId, toCharId: char.id, transactionType: "income", amount: income });
@@ -211,7 +211,7 @@ router.post("/api/realestate/collect-all", isAuthenticated, async (req, res) => 
     }
 
     if (totalIncome > 0) {
-      await db.update(characters).set({ gold: (char.gold ?? 0) + totalIncome }).where(eq(characters.id, char.id));
+      await db.update(characters).set({ stats: { ...(char.stats as any), gold: ((char.stats as any)?.gold ?? 0) + totalIncome } }).where(eq(characters.id, char.id));
     }
 
     res.json({ totalIncome, message: totalIncome > 0 ? `Thu được ${totalIncome} gold từ ${plots.length} mảnh đất!` : "Chưa có thu nhập nào cả" });

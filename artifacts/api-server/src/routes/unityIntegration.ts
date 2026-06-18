@@ -131,7 +131,7 @@ function npcState(npc: { energy: number; hunger: number; active: number; current
 // ─── GET /api/unity/world-state/:worldSlug ────────────────────────────────
 
 router.get("/unity/world-state/:worldSlug", isAuthenticated, async (req, res) => {
-  const { worldSlug } = req.params;
+  const { worldSlug } = req.params as Record<string, string>;
 
   try {
     // ① NPC cores + emotions (single join query)
@@ -326,7 +326,7 @@ router.get("/unity/world-state/:worldSlug", isAuthenticated, async (req, res) =>
 // ─── GET /api/unity/world-events/:worldSlug ───────────────────────────────
 
 router.get("/unity/world-events/:worldSlug", isAuthenticated, async (req, res) => {
-  const { worldSlug } = req.params;
+  const { worldSlug } = req.params as Record<string, string>;
   const limit = Math.min(Number(req.query.limit ?? 50), 200);
   const since = req.query.since ? new Date(String(req.query.since)) : null;
 
@@ -400,7 +400,7 @@ router.get("/unity/world-events/:worldSlug", isAuthenticated, async (req, res) =
 
     // Assemble events
     const events: WorldEventDTO[] = [
-      ...rows.map((r) => ({
+      ...rows.map((r: any) => ({
         id:        String(r.id),
         worldSlug: r.worldSlug,
         type:      r.type ?? "world_event",

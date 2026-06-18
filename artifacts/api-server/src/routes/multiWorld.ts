@@ -3,7 +3,7 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import {
   customWorlds, worldPortals, starDomains, npcs,
-  userWorldSlots,
+  userWorldSlots, characters,
 } from "@workspace/db/schema";
 import { eq, and, or, count } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -102,7 +102,7 @@ router.post("/api/multiworld/portal/travel/:portalId", isAuthenticated, async (r
     const [char] = await db.select().from(characters).where(eq(characters.id, characterId));
     if (!char) return res.status(404).json({ message: "Nhân vật không tồn tại" });
 
-    await db.update(characters).set({ currentWorld: portal.toWorldSlug }).where(eq(characters.id, characterId));
+    await db.update(characters).set({ stats: { ...(char.stats as any), world_slug: portal.toWorldSlug } }).where(eq(characters.id, characterId));
 
     res.json({
       message: "Di chuyển qua cổng thành công",

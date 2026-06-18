@@ -1441,3 +1441,34 @@ configureWorkflow("Frontend", "pnpm --filter @workspace/ai-world-system run dev"
 - [x] Trang `/military` (selector 3 thế giới, 6 action cards, stat summary, bảng quân đội, ký ức chiến trường, quy tắc hệ thống)
 - [x] Nút Dashboard "QUÂN ĐỘI NPC" (Sword icon)
 - [x] FIX: routes dùng `/military/...` không phải `/api/military/...` (app mount `/api` rồi)
+
+### ════════════════════════════════════════
+### PHASE 53 — FIX TOÀN BỘ LỖI TYPESCRIPT BACKEND
+### ════════════════════════════════════════
+
+**Mục tiêu:** Đảm bảo 0 lỗi TypeScript trên toàn bộ `api-server` — build sạch hoàn toàn.
+
+- [x] Fix `bank.ts`: thay `char.gold`/`char.worldSlug` → helpers từ stats JSON (`getCharGold`, `setCharGold`)
+- [x] Tạo `artifacts/api-server/src/lib/charHelpers.ts`: shared helpers `getCharGold`, `getCharWorldSlug`, `getCharStat`, `setCharGold`
+- [x] Fix `NPCPopulationPage.tsx`: thêm `Array.isArray(stats.allNpcs)` guard
+- [x] Fix `WorldSimulationPage.tsx`: thêm `res.ok` guards cho 5 fetch calls
+- [x] Fix `caravans.ts`: `requireAuth` → `isAuthenticated`
+- [x] Bulk fix 16+ route files: thêm `as Record<string, string>` cast cho `req.params` destructuring
+- [x] Fix `citizenship.ts` + `worldFair.ts`: `creatorId` → `createdBy` trên schema `customWorlds`
+- [x] Fix `bounty.ts`: `char.gold` → `(char.stats as any)?.gold`, `target.worldSlug` → stats JSON
+- [x] Fix `citizenship.ts`: `char.gold` → stats JSON
+- [x] Fix `expedition.ts`: `char.gold`/`char.hp`/`char.maxHp` → stats JSON (hp & maxHp trong stats)
+- [x] Fix `realEstate.ts`: tất cả `char.gold`/`oldOwner.gold` → stats JSON
+- [x] Fix `worldFair.ts`: `char.gold` → stats JSON, `w.creatorName` → `"Ẩn Danh"`
+- [x] Fix `worldSkill.ts`: `char.gold` → stats JSON
+- [x] Fix `tournament.ts`: `char.worldSlug`/`char.gold`/`winnerChar.gold` → stats JSON
+- [x] Fix `legend.ts`: `char.worldSlug`/`char.system`/`char.str-cha` → stats JSON, `achievementId` → `achievementKey`
+- [x] Fix `godMode.ts`: `characters.gold` (SUM) + `characters.currentWorld` (WHERE) → raw SQL `stats->>'...'`
+- [x] Fix `worldGovernance.ts`: `characters.worldSlug` → raw SQL `stats->>'world_slug'`
+- [x] Fix `multiWorld.ts`: thêm `characters` import còn thiếu, `characters.currentWorld` SET → stats JSON
+- [x] Fix `npcElections.ts`: `p.campaignScore` → `(p as any).campaignScore`, json response types → `as any`
+- [x] Fix `unityIntegration.ts`: `(r as any).type` để access dynamic property
+- [x] Bulk fix 32 route files: `req.params.xxx` trực tiếp → `String(req.params.xxx)` / `as string`
+- [x] Fix `fate.ts`: `new Date(char.createdAt)` → `new Date(char.createdAt ?? Date.now())` (nullable)
+- [x] **Kết quả: `tsc --noEmit` = 0 errors trên toàn bộ `@workspace/api-server`**
+- [x] API Server restart thành công, đang chạy tốt trên port 8080

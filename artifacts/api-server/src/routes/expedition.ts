@@ -133,7 +133,7 @@ router.get("/api/expedition/open", isAuthenticated, async (req, res) => {
 router.post("/api/expedition/join/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
 
     const [exp] = await db.select().from(expeditions).where(eq(expeditions.id, id));
     if (!exp) return res.status(404).json({ message: "Không tìm thấy đội" });
@@ -162,7 +162,7 @@ router.post("/api/expedition/join/:id", isAuthenticated, async (req, res) => {
 router.post("/api/expedition/start/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
     const [exp] = await db.select().from(expeditions).where(eq(expeditions.id, id));
     if (!exp) return res.status(404).json({ message: "Không tìm thấy" });
     if (exp.leaderId !== userId) return res.status(403).json({ message: "Chỉ leader mới có thể khởi động" });
@@ -181,7 +181,7 @@ router.post("/api/expedition/start/:id", isAuthenticated, async (req, res) => {
 router.post("/api/expedition/advance/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { id } = req.params;
+    const { id } = req.params as Record<string, string>;
 
     const [exp] = await db.select().from(expeditions).where(eq(expeditions.id, id));
     if (!exp) return res.status(404).json({ message: "Không tìm thấy" });
@@ -229,10 +229,10 @@ router.post("/api/expedition/advance/:id", isAuthenticated, async (req, res) => 
       const goldDelta = Math.floor(narrative.goldChange / members.length);
       const expDelta = Math.floor(narrative.expChange / members.length);
       const hpDelta = narrative.hpChange;
+      const cs = char.stats as any ?? {};
       await db.update(characters).set({
-        gold: Math.max(0, (char.gold ?? 0) + goldDelta),
+        stats: { ...cs, gold: Math.max(0, (cs.gold ?? 0) + goldDelta), hp: Math.max(1, Math.min(cs.maxHp ?? 100, (cs.hp ?? 100) + hpDelta)) },
         exp: (char.exp ?? 0) + expDelta,
-        hp: Math.max(1, Math.min(char.maxHp ?? 100, (char.hp ?? 100) + hpDelta)),
       }).where(eq(characters.id, char.id));
     }
 
@@ -242,7 +242,8 @@ router.post("/api/expedition/advance/:id", isAuthenticated, async (req, res) => 
         if (!char) continue;
         const bonusGold = Math.floor((exp.goldReward ?? 0) / members.length);
         const bonusExp = Math.floor((exp.expReward ?? 0) / members.length);
-        await db.update(characters).set({ gold: (char.gold ?? 0) + bonusGold, exp: (char.exp ?? 0) + bonusExp }).where(eq(characters.id, char.id));
+        const cs2 = char.stats as any ?? {};
+        await db.update(characters).set({ stats: { ...cs2, gold: (cs2.gold ?? 0) + bonusGold }, exp: (char.exp ?? 0) + bonusExp }).where(eq(characters.id, char.id));
       }
     }
 
@@ -275,7 +276,7 @@ router.get("/api/expedition/active", isAuthenticated, async (req, res) => {
 router.get("/api/expedition/events/:id", isAuthenticated, async (req, res) => {
   try {
     const events = await db.select().from(expeditionEvents)
-      .where(eq(expeditionEvents.expeditionId, req.params.id))
+      .where(eq(expeditionEvents.expeditionId, req.params.id as string))
       .orderBy(desc(expeditionEvents.step));
     res.json(events);
   } catch { res.status(500).json({ message: "Lỗi server" }); }

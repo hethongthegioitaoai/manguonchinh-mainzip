@@ -60,7 +60,7 @@ router.get("/world-map/player/me", isAuthenticated, async (req, res) => {
 ────────────────────────────────────────────────────── */
 router.get("/world-map/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db
       .select({
@@ -145,7 +145,7 @@ router.get("/world-map/:worldSlug", isAuthenticated, async (req, res) => {
 ────────────────────────────────────────────────────── */
 router.post("/world-map/:worldSlug/seed", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const terrs = await db
       .select()
       .from(territories)
@@ -211,7 +211,7 @@ router.get("/world-map/territory/:id", isAuthenticated, async (req, res) => {
       .from(territories)
       .leftJoin(npcFactions, eq(territories.ownerFactionId, npcFactions.id))
       .leftJoin(npcGovernments, eq(npcGovernments.territoryId, territories.id))
-      .where(eq(territories.id, req.params.id));
+      .where(eq(territories.id, req.params.id as string));
 
     if (!territory) return res.status(404).json({ error: "Lãnh thổ không tồn tại" });
 
@@ -267,7 +267,7 @@ router.post("/world-map/player/move", isAuthenticated, async (req, res) => {
 ────────────────────────────────────────────────────── */
 router.get("/world-map/:worldSlug/armies", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const armies = await db
       .select()
       .from(armyMovements)

@@ -248,7 +248,7 @@ const SEED_DATA: Record<string, Array<{
 ════════════════════════════════════════ */
 router.get("/api/npc-core/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1))).orderBy(npcCores.createdAt);
     const results = await Promise.all(npcs.map(async (npc) => {
       const [personality] = await db.select().from(npcPersonalities).where(eq(npcPersonalities.npcCoreId, npc.id));
@@ -264,7 +264,7 @@ router.get("/api/npc-core/:worldSlug", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.post("/api/npc-core/seed/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const existing = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug)).limit(1);
     if (existing.length > 0) return res.json({ message: "Đã có NPC, không cần seed lại", seeded: 0 });
 
@@ -299,7 +299,7 @@ router.post("/api/npc-core/seed/:worldSlug", isAuthenticated, async (req, res) =
 ════════════════════════════════════════ */
 router.post("/api/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
     if (npcs.length === 0) return res.json({ message: "Không có NPC để tick", ticked: 0 });
 
@@ -549,7 +549,7 @@ router.post("/api/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) =
 ════════════════════════════════════════ */
 router.get("/api/npc-market/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     await seedMarket(worldSlug);
 
     const market = await db.select().from(worldMarket).where(eq(worldMarket.worldSlug, worldSlug));
@@ -574,7 +574,7 @@ router.get("/api/npc-market/:worldSlug", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-economy/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const [npc] = await db.select().from(npcCores).where(eq(npcCores.id, npcId));
     if (!npc) return res.status(404).json({ message: "Không tìm thấy NPC" });
     const [job] = await db.select().from(npcJobs).where(eq(npcJobs.npcCoreId, npcId));
@@ -589,7 +589,7 @@ router.get("/api/npc-economy/:npcId", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-relationships/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const rows = await db.select().from(npcRelationships).where(or(eq(npcRelationships.npcAId, npcId), eq(npcRelationships.npcBId, npcId))).orderBy(desc(npcRelationships.updatedAt));
     const results = await Promise.all(rows.map(async (rel) => {
       const otherId = rel.npcAId === npcId ? rel.npcBId : rel.npcAId;
@@ -607,7 +607,7 @@ router.get("/api/npc-relationships/:npcId", isAuthenticated, async (req, res) =>
 ════════════════════════════════════════ */
 router.get("/api/npc-core/:npcId/memories", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const memories = await db.select().from(npcCoreMemories).where(eq(npcCoreMemories.npcCoreId, npcId)).orderBy(desc(npcCoreMemories.timestamp)).limit(20);
     return res.json(memories);
   } catch (err) { console.error("[npcCore] memories:", err); return res.status(500).json({ message: "Lỗi server" }); }
@@ -618,7 +618,7 @@ router.get("/api/npc-core/:npcId/memories", isAuthenticated, async (req, res) =>
 ════════════════════════════════════════ */
 router.get("/api/npc-core/detail/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const [npc] = await db.select().from(npcCores).where(eq(npcCores.id, npcId));
     if (!npc) return res.status(404).json({ message: "Không tìm thấy NPC" });
     const [personality] = await db.select().from(npcPersonalities).where(eq(npcPersonalities.npcCoreId, npcId));

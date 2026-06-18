@@ -101,7 +101,7 @@ router.get("/api/pets/my-chars", isAuthenticated, async (req, res) => {
 router.get("/api/pets/my/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { characterId } = req.params;
+    const { characterId } = req.params as Record<string, string>;
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));
     if (!char) return res.status(403).json({ message: "Không có quyền" });
 
@@ -164,7 +164,7 @@ router.post("/api/pets/summon", isAuthenticated, async (req, res) => {
 router.post("/api/pets/:id/equip", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const petId  = req.params.id;
+    const petId  = req.params.id as string;
     const { characterId } = z.object({ characterId: z.string().uuid() }).parse(req.body);
 
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));
@@ -185,7 +185,7 @@ router.post("/api/pets/:id/equip", isAuthenticated, async (req, res) => {
 router.post("/api/pets/:id/unequip", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const petId  = req.params.id;
+    const petId  = req.params.id as string;
     const { characterId } = z.object({ characterId: z.string().uuid() }).parse(req.body);
 
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));
@@ -200,7 +200,7 @@ router.post("/api/pets/:id/unequip", isAuthenticated, async (req, res) => {
 router.post("/api/pets/:id/feed", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const petId  = req.params.id;
+    const petId  = req.params.id as string;
     const { characterId } = z.object({ characterId: z.string().uuid() }).parse(req.body);
 
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));

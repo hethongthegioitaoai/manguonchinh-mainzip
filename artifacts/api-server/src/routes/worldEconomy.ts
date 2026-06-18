@@ -74,7 +74,7 @@ router.get("/api/world-economy/history", isAuthenticated, async (req, res) => {
 ─────────────────────────────────────────────── */
 router.get("/api/world-economy/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [currency] = await db.select().from(worldCurrencies).where(eq(worldCurrencies.worldSlug, worldSlug));
     const [treasury] = await db.select().from(worldTreasury).where(eq(worldTreasury.worldSlug, worldSlug));
 
@@ -271,7 +271,7 @@ router.post("/api/world-economy/exchange", isAuthenticated, async (req, res) => 
 router.post("/api/world-economy/tax/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { taxRate } = z.object({ taxRate: z.number().int().min(0).max(30) }).parse(req.body);
 
     // Kiểm tra quyền owner
@@ -296,7 +296,7 @@ router.post("/api/world-economy/tax/:worldSlug", isAuthenticated, async (req, re
 router.post("/api/world-economy/treasury/spend/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { amount, reason, characterId } = z.object({
       amount: z.number().int().positive(),
       reason: z.string().min(1).max(200),

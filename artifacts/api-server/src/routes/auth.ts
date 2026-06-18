@@ -128,6 +128,14 @@ router.post("/auth/logout", (req, res) => {
   });
 });
 
+/* POST /api/logout — alias cho AuthContext.tsx */
+router.post("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie("connect.sid");
+    res.json({ message: "Đã đăng xuất" });
+  });
+});
+
 /* POST /api/auth/change-password */
 router.post("/auth/change-password", isAuthenticated, async (req: any, res) => {
   try {

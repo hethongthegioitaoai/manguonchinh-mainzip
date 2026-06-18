@@ -57,7 +57,7 @@ function generateFactionName(type: string, worldSlug: string): string {
 ════════════════════════════════════════ */
 router.get("/api/npc-factions/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const factions = await db.select().from(npcFactions).where(eq(npcFactions.worldSlug, worldSlug)).orderBy(desc(npcFactions.treasury));
 
@@ -94,7 +94,7 @@ router.get("/api/npc-factions/:worldSlug", isAuthenticated, async (req, res) => 
 ════════════════════════════════════════ */
 router.post("/api/npc-factions/auto-form/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     /* Load all active adult NPCs in this world */
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
@@ -255,7 +255,7 @@ router.post("/api/npc-factions/auto-form/:worldSlug", isAuthenticated, async (re
 ════════════════════════════════════════ */
 router.post("/api/npc-factions/collect-tribute/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const factions = await db.select().from(npcFactions).where(eq(npcFactions.worldSlug, worldSlug));
     if (factions.length === 0) return res.json({ collected: 0, message: "Chưa có hội nhóm nào" });

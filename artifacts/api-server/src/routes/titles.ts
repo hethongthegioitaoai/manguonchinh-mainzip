@@ -125,7 +125,7 @@ async function checkAndGrantTitles(characterId: string): Promise<string[]> {
 router.get("/api/titles/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { characterId } = req.params;
+    const { characterId } = req.params as Record<string, string>;
 
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));
     if (!char) return res.status(403).json({ message: "Không có quyền" });
@@ -169,7 +169,7 @@ router.get("/api/titles/my-chars", isAuthenticated, async (req, res) => {
 router.post("/api/titles/equip/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { characterId } = req.params;
+    const { characterId } = req.params as Record<string, string>;
     const { titleKey } = req.body as { titleKey: string };
 
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));
@@ -193,7 +193,7 @@ router.post("/api/titles/equip/:characterId", isAuthenticated, async (req, res) 
 router.post("/api/titles/unequip/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { characterId } = req.params;
+    const { characterId } = req.params as Record<string, string>;
 
     const [char] = await db.select().from(characters).where(and(eq(characters.id, characterId), eq(characters.userId, userId)));
     if (!char) return res.status(403).json({ message: "Không có quyền" });

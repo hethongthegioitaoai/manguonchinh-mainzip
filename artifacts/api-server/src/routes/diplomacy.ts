@@ -46,7 +46,7 @@ async function getWorldName(slug: string): Promise<string> {
 ───────────────────────────────────────────────────── */
 router.get("/api/diplomacy/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const relations = await db.select().from(worldRelations).where(
       or(eq(worldRelations.worldSlugA, worldSlug), eq(worldRelations.worldSlugB, worldSlug))
     );
@@ -156,7 +156,7 @@ router.post("/api/diplomacy/propose", isAuthenticated, async (req, res) => {
 router.post("/api/diplomacy/respond/:eventId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { eventId } = req.params;
+    const { eventId } = req.params as Record<string, string>;
     const { accept } = z.object({ accept: z.boolean() }).parse(req.body);
 
     const [event] = await db.select().from(diplomacyEvents).where(eq(diplomacyEvents.id, eventId));
@@ -279,7 +279,7 @@ router.post("/api/diplomacy/establish-embassy", isAuthenticated, async (req, res
 router.post("/api/diplomacy/sanction/:targetWorldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { targetWorldSlug } = req.params;
+    const { targetWorldSlug } = req.params as Record<string, string>;
     const { fromWorldSlug, reason } = z.object({
       fromWorldSlug: z.string().min(1),
       reason: z.string().default(""),
@@ -320,7 +320,7 @@ router.post("/api/diplomacy/sanction/:targetWorldSlug", isAuthenticated, async (
 router.post("/api/diplomacy/peace/:targetWorldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { targetWorldSlug } = req.params;
+    const { targetWorldSlug } = req.params as Record<string, string>;
     const { fromWorldSlug } = z.object({ fromWorldSlug: z.string().min(1) }).parse(req.body);
 
     const ownerCheck = await db.execute(

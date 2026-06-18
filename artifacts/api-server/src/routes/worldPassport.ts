@@ -60,7 +60,7 @@ router.get("/api/passport/my", isAuthenticated, async (req, res) => {
 router.get("/api/passport/visitors/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const [world] = await db.select().from(customWorlds)
       .where(and(eq(customWorlds.slug, worldSlug), eq(customWorlds.createdBy, userId)));
     if (!world) return res.status(403).json({ error: "Bạn không phải creator của thế giới này" });
@@ -84,7 +84,7 @@ router.get("/api/passport/visitors/:worldSlug", isAuthenticated, async (req, res
 router.post("/api/passport/request/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { characterId, note } = req.body;
     if (!characterId) return res.status(400).json({ error: "Thiếu characterId" });
 
@@ -122,7 +122,7 @@ router.post("/api/passport/request/:worldSlug", isAuthenticated, async (req, res
 router.post("/api/passport/approve/:passportId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { passportId } = req.params;
+    const { passportId } = req.params as Record<string, string>;
     const { note } = req.body;
 
     const [passport] = await db.select().from(worldPassports).where(eq(worldPassports.id, passportId));
@@ -149,7 +149,7 @@ router.post("/api/passport/approve/:passportId", isAuthenticated, async (req, re
 router.post("/api/passport/ban/:passportId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { passportId } = req.params;
+    const { passportId } = req.params as Record<string, string>;
     const { reason } = req.body;
 
     const [passport] = await db.select().from(worldPassports).where(eq(worldPassports.id, passportId));
@@ -176,7 +176,7 @@ router.post("/api/passport/ban/:passportId", isAuthenticated, async (req, res) =
 router.get("/api/passport/visit/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const { characterId } = req.query as { characterId?: string };
 
     const [world] = await db.select().from(customWorlds)

@@ -392,7 +392,7 @@ function computeEmotionDelta(playerMsg: string, significance: string): Record<st
 ════════════════════════════════════════ */
 router.get("/api/npc-dialogue/context/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const ctx = await buildNpcContext(req.params.npcId);
+    const ctx = await buildNpcContext(req.params.npcId as string);
     if (!ctx) return res.status(404).json({ message: "Không tìm thấy NPC" });
     return res.json(ctx);
   } catch (err) {
@@ -501,7 +501,7 @@ router.post("/api/npc-dialogue", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.get("/api/npc-dialogue/history/:npcId", isAuthenticated, async (req, res) => {
   try {
-    const { npcId } = req.params;
+    const { npcId } = req.params as Record<string, string>;
     const playerId = (req.query.player_id as string) ?? "guest";
 
     const [session] = await db.select().from(npcDialogueSessions)
@@ -528,7 +528,7 @@ router.get("/api/npc-dialogue/history/:npcId", isAuthenticated, async (req, res)
 ════════════════════════════════════════ */
 router.get("/api/npc-dialogue/list/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({
       id: npcCores.id, name: npcCores.name,
       occupation: npcCores.occupation, age: npcCores.age,

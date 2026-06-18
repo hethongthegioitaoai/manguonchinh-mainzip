@@ -103,7 +103,7 @@ router.post("/api/feed/auto", isAuthenticated, async (req, res) => {
 router.post("/api/feed/:postId/like", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { postId } = req.params;
+    const { postId } = req.params as Record<string, string>;
 
     const existing = await db.select().from(postLikes).where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
 
@@ -128,7 +128,7 @@ router.post("/api/feed/:postId/like", isAuthenticated, async (req, res) => {
 router.delete("/api/feed/:postId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { postId } = req.params;
+    const { postId } = req.params as Record<string, string>;
     await db.delete(storyPosts).where(and(eq(storyPosts.id, postId), eq(storyPosts.userId, userId)));
     res.json({ success: true });
   } catch (err) {

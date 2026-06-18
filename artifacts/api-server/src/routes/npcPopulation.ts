@@ -36,7 +36,7 @@ const CHILD_NAMES = [
 ════════════════════════════════════════ */
 router.get("/api/npc-population/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const allNpcs = await db.select({
       id: npcCores.id,
@@ -85,7 +85,7 @@ router.get("/api/npc-population/:worldSlug", isAuthenticated, async (req, res) =
 ════════════════════════════════════════ */
 router.post("/api/npc-population/run-aging/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
 
     let aged = 0, promoted = 0;

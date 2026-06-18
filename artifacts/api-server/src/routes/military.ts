@@ -34,7 +34,7 @@ function calcMilitaryPower(soldiers: number, morale: number, training: number, s
 ════════════════════════════════════════ */
 router.get("/military/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const terrIds = terrs.map(t => t.id);
@@ -82,7 +82,7 @@ router.get("/military/:worldSlug", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.post("/military/establish/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const terrIds = terrs.map(t => t.id);
@@ -143,7 +143,7 @@ router.post("/military/establish/:worldSlug", isAuthenticated, async (req, res) 
 ════════════════════════════════════════ */
 router.post("/military/recruit/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const terrIds = terrs.map(t => t.id);
@@ -228,7 +228,7 @@ router.post("/military/recruit/:worldSlug", isAuthenticated, async (req, res) =>
 ════════════════════════════════════════ */
 router.post("/military/train/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const govs  = await db.select().from(npcGovernments)
@@ -290,7 +290,7 @@ router.post("/military/train/:worldSlug", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.post("/military/supply/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const govs  = await db.select().from(npcGovernments)
@@ -361,7 +361,7 @@ router.post("/military/supply/:worldSlug", isAuthenticated, async (req, res) => 
 ════════════════════════════════════════ */
 router.post("/military/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
     const base = `${req.protocol}://${req.get("host")}`;
     const headers = { Cookie: req.headers.cookie ?? "", "Content-Type": "application/json" };
 
@@ -383,7 +383,7 @@ router.post("/military/tick/:worldSlug", isAuthenticated, async (req, res) => {
 ════════════════════════════════════════ */
 router.post("/military/ai-decision/:worldSlug", isAuthenticated, async (req, res) => {
   try {
-    const { worldSlug } = req.params;
+    const { worldSlug } = req.params as Record<string, string>;
 
     const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
     const govs  = await db.select().from(npcGovernments)
