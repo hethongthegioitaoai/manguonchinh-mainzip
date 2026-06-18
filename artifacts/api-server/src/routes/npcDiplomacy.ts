@@ -2,9 +2,10 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   diplomaticRelations, diplomaticTreaties, diplomaticMemories,
-  npcGovernments,
+  npcGovernments, territories,
 } from "@workspace/db/schema";
 import { eq, and, or, desc } from "drizzle-orm";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 
@@ -158,6 +159,25 @@ router.post("/api/npc-diplomacy/action", async (req, res) => {
           eq(diplomaticTreaties.status, "active")
         ));
     }
+
+    /* Unity realtime broadcast — resolve territory worldSlug from government */
+    try {
+      const [terrA] = await db
+        .select({ worldSlug: territories.worldSlug })
+        .from(territories)
+        .where(eq(territories.id, govA.territoryId))
+        .limit(1);
+      if (terrA) {
+        broadcastUnity({
+          type: "diplomacy",
+          worldSlug: terrA.worldSlug,
+          govA: govA.govType,
+          govB: govB.govType,
+          action: `${actionMeta.icon} ${actionMeta.label}`,
+          relation: newType,
+        });
+      }
+    } catch {}
 
     const scoreStr = newScore > 0 ? `+${newScore}` : `${newScore}`;
     res.json({

@@ -9,6 +9,7 @@ import {
   elections, electionCandidates,
 } from "@workspace/db/schema";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 
@@ -384,6 +385,18 @@ router.post("/api/npc-elections/resolve/:worldSlug", isAuthenticated, async (req
         governmentId: el.governmentId,
         event: `${winnerNpc.name} giành chiến thắng trong cuộc ${typeLabel} với ${pct}% phiếu bầu. Chính quyền mới được thành lập tại ${terr?.name ?? "lãnh thổ"}.`,
       });
+
+      /* Unity realtime broadcast */
+      if (terr) {
+        broadcastUnity({
+          type: "election",
+          worldSlug: terr.worldSlug,
+          govId: el.governmentId,
+          territory: terr.name,
+          electionType: typeLabel,
+          winner: winnerNpc.name,
+        });
+      }
 
       /* Winner memory */
       await db.insert(npcCoreMemories).values({

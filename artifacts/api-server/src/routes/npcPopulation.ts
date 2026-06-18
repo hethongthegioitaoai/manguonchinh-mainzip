@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { npcCores, npcCoreMemories, npcPersonalities, npcRelationships } from "@workspace/db/schema";
 import { npcFamilies, npcFamilyMemories, npcBirths } from "@workspace/db/schema";
 import { eq, desc, and, isNotNull, count, sql } from "drizzle-orm";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 
@@ -200,6 +201,16 @@ router.post("/api/npc-population/run-aging/:worldSlug", isAuthenticated, async (
       await db.insert(npcCoreMemories).values({ npcCoreId: npcB.id, event: memB, importance: 5 });
 
       births.push(childName);
+
+      /* Unity realtime broadcast */
+      broadcastUnity({
+        type: "birth",
+        worldSlug,
+        npcId: newNpc.id,
+        name: childName,
+        parentName: npcA.name,
+        pos: null,
+      });
     }
 
     return res.json({ aged, promoted, births, message: `Già hoá ${aged} NPC, ${births.length} trẻ sơ sinh mới` });

@@ -5,6 +5,7 @@ import { worldWars, warContributions, worldRelations, worldTreasury, characters 
 import { eq, and, or, sql, desc, lt } from "drizzle-orm";
 import { z } from "zod";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -54,6 +55,20 @@ async function settleExpiredWars() {
     await db.update(worldWars)
       .set({ status: "ended", winnerId })
       .where(eq(worldWars.id, war.id));
+
+    /* Unity realtime broadcast — war ended */
+    broadcastUnity({
+      type: "war_end",
+      worldSlug: war.attackerWorldSlug,
+      warId: war.id,
+      winner: winnerId === war.attackerWorldSlug ? war.attackerWorldName : war.defenderWorldName,
+    });
+    broadcastUnity({
+      type: "war_end",
+      worldSlug: war.defenderWorldSlug,
+      warId: war.id,
+      winner: winnerId === war.attackerWorldSlug ? war.attackerWorldName : war.defenderWorldName,
+    });
 
     // Chuyển quan hệ về neutral
     const [a, b] = [war.attackerWorldSlug, war.defenderWorldSlug].sort();
@@ -179,6 +194,24 @@ router.post("/api/world-war/declare/:targetWorldSlug", isAuthenticated, async (r
         worldSlugA: a, worldSlugB: b, status: "enemy", treatiesDetails: {},
       });
     }
+
+    /* Unity realtime broadcast — war started (broadcast to both worlds) */
+    broadcastUnity({
+      type: "war_start",
+      worldSlug: fromWorldSlug,
+      warId: war.id,
+      attacker: attackerName,
+      defender: defenderName,
+      reason,
+    });
+    broadcastUnity({
+      type: "war_start",
+      worldSlug: targetWorldSlug,
+      warId: war.id,
+      attacker: attackerName,
+      defender: defenderName,
+      reason,
+    });
 
     res.status(201).json({ war });
   } catch (err) { res.status(500).json({ message: "Lỗi server" }); }
