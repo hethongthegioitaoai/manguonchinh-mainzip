@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   LogOut, Globe, Zap, User, Shield, Swords, Users,
-  TrendingUp, ChevronRight, Plus, Loader2, CheckCircle2, Scroll, Star, ExternalLink, Trophy, Settings, Brain, Sparkles, Skull, Hammer, Newspaper, Crown, ShoppingBag, Map, ScrollText, Infinity, Orbit, Mail, X, Gavel, Award, Handshake, Palette, Scale, AlertTriangle, Landmark, Target, Sword, Leaf, Compass, BookOpen, CloudLightning, Activity, Vote, Truck, PartyPopper, ListChecks,
+  TrendingUp, ChevronRight, Plus, Loader2, CheckCircle2, Scroll, Star, ExternalLink, Trophy, Settings, Brain, Sparkles, Skull, Hammer, Newspaper, Crown, ShoppingBag, Map, ScrollText, Infinity, Orbit, Mail, X, Gavel, Award, Handshake, Palette, Scale, AlertTriangle, Landmark, Target, Sword, Leaf, Compass, BookOpen, CloudLightning, Activity, Vote, Truck, PartyPopper, ListChecks, Smile,
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -675,6 +675,14 @@ export default function DashboardPage() {
                         tag: "NEW",
                         disabled: false,
                         onClick: () => setLocation("/npc-plans"),
+                      },
+                      {
+                        icon: Smile,
+                        label: "CẢM XÚC NPC",
+                        sub: "Hạnh phúc, tức giận, sợ hãi — ảnh hưởng hành vi",
+                        tag: "NEW",
+                        disabled: false,
+                        onClick: () => setLocation("/npc-emotions"),
                       },
                       {
                         icon: Globe,

@@ -74,6 +74,7 @@ import npcDiplomacyRouter from "./npcDiplomacy.js";
 import militaryRouter from "./military.js";
 import npcLongTermGoalsRouter from "./npcLongTermGoals.js";
 import npcPlansRouter from "./npcPlans.js";
+import npcEmotionsRouter from "./npcEmotions.js";
 
 const router: IRouter = Router();
 
@@ -152,5 +153,6 @@ router.use(npcDiplomacyRouter);
 router.use(militaryRouter);
 router.use(npcLongTermGoalsRouter);
 router.use(npcPlansRouter);
+router.use(npcEmotionsRouter);
 
 export default router;

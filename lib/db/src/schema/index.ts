@@ -67,3 +67,4 @@ export * from "./diplomaticRelations";
 export * from "./militaryForces";
 export * from "./npcLongTermGoals";
 export * from "./npcPlans";
+export * from "./npcEmotions";
