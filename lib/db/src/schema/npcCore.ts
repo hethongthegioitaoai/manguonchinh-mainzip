@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, text, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, text, timestamp, real, boolean } from "drizzle-orm/pg-core";
 
 export const npcCores = pgTable("npc_cores", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -92,6 +92,28 @@ export const marketOrders = pgTable("market_orders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const npcPersonalityHistory = pgTable("npc_personality_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  npcCoreId: uuid("npc_core_id").notNull().references(() => npcCores.id, { onDelete: "cascade" }),
+  kindness: real("kindness").notNull(),
+  greed: real("greed").notNull(),
+  bravery: real("bravery").notNull(),
+  intelligence: real("intelligence").notNull(),
+  curiosity: real("curiosity").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const npcPersonalityLogs = pgTable("npc_personality_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  npcCoreId: uuid("npc_core_id").notNull().references(() => npcCores.id, { onDelete: "cascade" }),
+  trait: varchar("trait", { length: 32 }).notNull(),
+  delta: real("delta").notNull(),
+  cause: text("cause").notNull(),
+  causeType: varchar("cause_type", { length: 32 }).notNull().default("memory"),
+  journal: text("journal").notNull().default(""),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export type NpcCore = typeof npcCores.$inferSelect;
 export type InsertNpcCore = typeof npcCores.$inferInsert;
 export type NpcPersonality = typeof npcPersonalities.$inferSelect;
@@ -100,3 +122,5 @@ export type NpcRelationship = typeof npcRelationships.$inferSelect;
 export type NpcJob = typeof npcJobs.$inferSelect;
 export type NpcInventoryItem = typeof npcInventory.$inferSelect;
 export type NpcTransaction = typeof npcTransactions.$inferSelect;
+export type NpcPersonalityHistory = typeof npcPersonalityHistory.$inferSelect;
+export type NpcPersonalityLog = typeof npcPersonalityLogs.$inferSelect;

@@ -83,6 +83,7 @@ import MilitaryPage from "@/pages/MilitaryPage";
 import NpcLongTermGoalsPage from "@/pages/NpcLongTermGoalsPage";
 import NpcPlansPage from "@/pages/NpcPlansPage";
 import NpcEmotionsPage from "@/pages/NpcEmotionsPage";
+import PersonalityEvolutionPage from "@/pages/PersonalityEvolutionPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
 
@@ -175,6 +176,7 @@ function Router() {
       <Route path="/npc-goals" component={NpcLongTermGoalsPage} />
       <Route path="/npc-plans" component={NpcPlansPage} />
       <Route path="/npc-emotions" component={NpcEmotionsPage} />
+      <Route path="/personality-evolution" component={PersonalityEvolutionPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />
