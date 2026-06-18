@@ -299,7 +299,15 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message ?? "Đăng nhập thất bại"); return; }
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.setQueryData(["/api/auth/user"], {
+        id: data.id,
+        email: data.email,
+        username: data.username,
+        firstName: data.firstName,
+        emailVerified: data.emailVerified ?? false,
+      });
+      setTransitioning(data.username ?? data.firstName ?? loginForm.login);
+      setTimeout(() => setLocation("/worlds"), 2200);
     } catch {
       setError("Không thể kết nối máy chủ");
     } finally {
