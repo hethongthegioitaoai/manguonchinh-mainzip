@@ -73,6 +73,7 @@ import divineArenaRouter from "./divineArena.js";
 import npcDiplomacyRouter from "./npcDiplomacy.js";
 import militaryRouter from "./military.js";
 import npcLongTermGoalsRouter from "./npcLongTermGoals.js";
+import npcPlansRouter from "./npcPlans.js";
 
 const router: IRouter = Router();
 
@@ -150,5 +151,6 @@ router.use(divineArenaRouter);
 router.use(npcDiplomacyRouter);
 router.use(militaryRouter);
 router.use(npcLongTermGoalsRouter);
+router.use(npcPlansRouter);
 
 export default router;

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import {
   LogOut, Globe, Zap, User, Shield, Swords, Users,
-  TrendingUp, ChevronRight, Plus, Loader2, CheckCircle2, Scroll, Star, ExternalLink, Trophy, Settings, Brain, Sparkles, Skull, Hammer, Newspaper, Crown, ShoppingBag, Map, ScrollText, Infinity, Orbit, Mail, X, Gavel, Award, Handshake, Palette, Scale, AlertTriangle, Landmark, Target, Sword, Leaf, Compass, BookOpen, CloudLightning, Activity, Vote, Truck, PartyPopper,
+  TrendingUp, ChevronRight, Plus, Loader2, CheckCircle2, Scroll, Star, ExternalLink, Trophy, Settings, Brain, Sparkles, Skull, Hammer, Newspaper, Crown, ShoppingBag, Map, ScrollText, Infinity, Orbit, Mail, X, Gavel, Award, Handshake, Palette, Scale, AlertTriangle, Landmark, Target, Sword, Leaf, Compass, BookOpen, CloudLightning, Activity, Vote, Truck, PartyPopper, ListChecks,
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -667,6 +667,14 @@ export default function DashboardPage() {
                         tag: "NEW",
                         disabled: false,
                         onClick: () => setLocation("/npc-goals"),
+                      },
+                      {
+                        icon: ListChecks,
+                        label: "KẾ HOẠCH NPC",
+                        sub: "Kế hoạch từng bước, điều chỉnh khi thất bại",
+                        tag: "NEW",
+                        disabled: false,
+                        onClick: () => setLocation("/npc-plans"),
                       },
                       {
                         icon: Globe,
