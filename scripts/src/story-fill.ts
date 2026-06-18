@@ -1,0 +1,103 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from "fs";
+import path from "path";
+
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ Thiếu GEMINI_API_KEY trong secrets.");
+  process.exit(1);
+}
+
+const args = process.argv.slice(2);
+const moiBai = args[0]?.trim();
+const ketBai = args[1]?.trim();
+const soKichBan = parseInt(args[2] ?? "3");
+
+if (!moiBai || !ketBai) {
+  console.error("❌ Cách dùng:");
+  console.error('   pnpm --filter @workspace/scripts run story "Mở bài" "Kết bài" [số kịch bản]');
+  console.error("");
+  console.error('   Ví dụ:');
+  console.error('   pnpm --filter @workspace/scripts run story "Hai người yêu nhau" "Họ cưới nhau" 3');
+  process.exit(1);
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+const PROMPT = `
+Bạn là một nhà biên kịch tài năng. Người dùng đưa cho bạn MỞ BÀI và KẾT BÀI của một câu chuyện. Nhiệm vụ của bạn là sáng tác THÂN BÀI — tức là những gì xảy ra ở giữa.
+
+MỞ BÀI: "${moiBai}"
+KẾT BÀI: "${ketBai}"
+
+Hãy tạo ra ĐÚNG ${soKichBan} KỊCH BẢN khác nhau cho thân bài. Mỗi kịch bản phải:
+- Bắt đầu từ mở bài, kết thúc tại kết bài
+- Có một hướng đi HOÀN TOÀN KHÁC NHAU (vui, buồn, kỳ lạ, phiêu lưu, hài hước, bi kịch, bất ngờ...)
+- Gồm 3-5 sự kiện/bước chính diễn ra trong thân bài
+- Mỗi bước được mô tả 1-2 câu, sống động và cụ thể
+- Không dùng markdown, không dùng ký hiệu đặc biệt
+
+FORMAT đầu ra CHÍNH XÁC như sau (không thêm bớt):
+
+========================================
+KỊCH BẢN [số]: [tên/cảm xúc chủ đạo bằng 3-5 chữ]
+========================================
+
+MỞ BÀI: ${moiBai}
+
+[Bước 1]: [mô tả sự kiện]
+[Bước 2]: [mô tả sự kiện]
+[Bước 3]: [mô tả sự kiện]
+... (thêm nếu cần)
+
+KẾT BÀI: ${ketBai}
+
+Lặp lại cho mỗi kịch bản.
+`.trim();
+
+async function main() {
+  console.log("\n📖 Đang sáng tác kịch bản...");
+  console.log(`   Mở bài : "${moiBai}"`);
+  console.log(`   Kết bài: "${ketBai}"`);
+  console.log(`   Số kịch bản: ${soKichBan}\n`);
+
+  const result = await model.generateContent(PROMPT);
+  const text = result.response.text();
+
+  const safeTitle = moiBai
+    .toLowerCase()
+    .replace(/[^a-z0-9\u00C0-\u024F\u1E00-\u1EFF ]/gi, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 40);
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const filename = `story-${safeTitle}-${timestamp}.txt`;
+  const outputDir = path.resolve(process.cwd(), "output");
+
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const filepath = path.join(outputDir, filename);
+
+  const header = [
+    "=".repeat(60),
+    `MO BAI : ${moiBai}`,
+    `KET BAI: ${ketBai}`,
+    `Ngày   : ${new Date().toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`,
+    "=".repeat(60),
+    "",
+  ].join("\n");
+
+  fs.writeFileSync(filepath, header + text, "utf8");
+
+  console.log(text);
+  console.log("\n" + "─".repeat(60));
+  console.log(`✅ Đã lưu: output/${filename}`);
+}
+
+main().catch((err) => {
+  console.error("❌ Lỗi:", err.message);
+  process.exit(1);
+});

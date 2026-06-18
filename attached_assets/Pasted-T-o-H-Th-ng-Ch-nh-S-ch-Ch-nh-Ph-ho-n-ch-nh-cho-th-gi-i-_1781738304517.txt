@@ -1,0 +1,153 @@
+Tạo Hệ Thống Chính Sách Chính Phủ hoàn chỉnh cho thế giới NPC hiện tại.
+
+Yêu cầu:
+
+1. Tạo bảng government_policies.
+
+Các trường:
+
+* id
+* tên_chính_sách
+* danh_mục
+* mô_tả
+
+Danh mục:
+
+* kinh_tế
+* phúc_lợi
+* quân_sự
+* hạ_tầng
+* thương_mại
+
+Các hiệu ứng:
+
+* điều_chỉnh_thuế
+* điều_chỉnh_ủng_hộ
+* điều_chỉnh_thực_phẩm
+* điều_chỉnh_an_ninh
+* điều_chỉnh_thịnh_vượng
+* điều_chỉnh_thương_mại
+
+2. Tạo bảng government_active_policies.
+
+Các trường:
+
+* id
+* government_id
+* policy_id
+* thời_gian_kích_hoạt
+
+Mỗi chính phủ có thể áp dụng nhiều chính sách cùng lúc.
+
+3. Tạo sẵn các chính sách mặc định.
+
+Thuế Thấp
+
+* điều_chỉnh_thuế: -5
+* điều_chỉnh_ủng_hộ: +5
+
+Thuế Cao
+
+* điều_chỉnh_thuế: +10
+* điều_chỉnh_ủng_hộ: -10
+
+Trợ Cấp Lương Thực
+
+* điều_chỉnh_thực_phẩm: +15
+* điều_chỉnh_ủng_hộ: +8
+* tiêu_hao_ngân_quỹ_mỗi_tick
+
+Khuyến Khích Thương Mại
+
+* điều_chỉnh_thịnh_vượng: +10
+* điều_chỉnh_thương_mại: +15
+
+Mở Rộng Quân Sự
+
+* điều_chỉnh_an_ninh: +15
+* điều_chỉnh_ủng_hộ: -3
+* tiêu_hao_ngân_quỹ_mỗi_tick
+
+Đầu Tư Hạ Tầng
+
+* điều_chỉnh_thịnh_vượng: +20
+* điều_chỉnh_ủng_hộ: +5
+* tiêu_hao_ngân_quỹ_mỗi_tick
+
+4. Tích hợp vào World Tick.
+
+Mỗi tick:
+
+* áp dụng hiệu ứng của các chính sách đang hoạt động
+* cập nhật ngân quỹ
+* cập nhật tỷ lệ ủng hộ
+* cập nhật an ninh
+* cập nhật thịnh vượng
+* cập nhật nguồn thực phẩm
+
+Ví dụ:
+
+* Thuế Cao làm tăng nguồn thu ngân sách
+* Trợ Cấp Lương Thực giảm nguy cơ đói
+* Mở Rộng Quân Sự tăng an ninh
+* Đầu Tư Hạ Tầng tăng thịnh vượng
+
+5. Hệ thống ra quyết định tự động cho lãnh đạo.
+
+Nếu thực phẩm thấp:
+→ kích hoạt Trợ Cấp Lương Thực
+
+Nếu ngân quỹ thấp:
+→ kích hoạt Thuế Cao
+
+Nếu tỷ lệ ủng hộ thấp:
+→ kích hoạt Thuế Thấp
+
+Nếu an ninh thấp:
+→ kích hoạt Mở Rộng Quân Sự
+
+Nếu kinh tế trì trệ:
+→ kích hoạt Khuyến Khích Thương Mại hoặc Đầu Tư Hạ Tầng
+
+6. Ký ức chính phủ.
+
+Lưu lịch sử quyết định.
+
+Ví dụ:
+
+* "Ban hành Trợ Cấp Lương Thực."
+* "Tăng thuế do thiếu ngân sách."
+* "Đầu tư xây dựng hạ tầng."
+
+7. Thêm tab CHÍNH SÁCH trong Government Dashboard.
+
+Hiển thị:
+
+* danh sách chính sách đang hoạt động
+* hiệu ứng của từng chính sách
+* tác động tới ngân quỹ
+* tác động tới tỷ lệ ủng hộ
+
+Cho phép:
+
+* kích hoạt chính sách
+* hủy kích hoạt chính sách
+
+8. Lịch sử chính sách.
+
+Lưu:
+
+* tên chính sách
+* lãnh đạo ban hành
+* thời gian áp dụng
+* thời gian kết thúc
+
+9. Đảm bảo tương thích với:
+
+* Hệ thống NPC
+* Hệ thống Kinh tế
+* Hệ thống Chợ
+* Hệ thống Lãnh thổ
+* Hệ thống Chính phủ
+
+Không làm hỏng các tính năng hiện có.

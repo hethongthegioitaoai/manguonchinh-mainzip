@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "AI World System"
+version = "1.0.0"
+id = "artifacts/ai-world-system"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19734
+
+[services.development]
+run = "pnpm --filter @workspace/ai-world-system run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ai-world-system", "run", "build" ]
+publicDir = "artifacts/ai-world-system/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19734"
+BASE_PATH = "/"

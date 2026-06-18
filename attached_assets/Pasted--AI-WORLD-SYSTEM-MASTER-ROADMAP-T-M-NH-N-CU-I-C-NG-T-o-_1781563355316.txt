@@ -1,0 +1,391 @@
+# AI WORLD SYSTEM — MASTER ROADMAP
+
+## TẦM NHÌN CUỐI CÙNG
+
+Tạo một nền tảng nơi:
+
+* Người dùng tạo thế giới riêng
+* AI tự sinh NPC, Quest, Boss, Lịch sử
+* AI quản trị thế giới như Game Master
+* Mỗi người chơi nhận Hệ Thống khác nhau
+* Thế giới tiếp tục tồn tại ngay cả khi không có người chơi online
+* Sau này hỗ trợ 3D, VR, AR, MR, XR
+
+---
+
+# PHASE 1 — FOUNDATION MVP
+
+Mục tiêu:
+
+Người chơi đăng nhập và bắt đầu cuộc phiêu lưu đầu tiên.
+
+## Auth
+
+* Login
+* Session
+* Profile
+
+## Character
+
+* Tạo nhân vật
+* Chọn thế giới
+* Chỉ số cơ bản
+* Level
+* EXP
+
+## Core Systems
+
+* Inventory
+* Quest
+* Battle
+* Leaderboard
+
+## Worlds
+
+* Cultivation World
+* Cyberpunk World
+* Wasteland World
+
+Kết quả:
+
+Người chơi có thể:
+
+Login → Chọn World → Tạo Character → Chơi
+
+---
+
+# PHASE 2 — SYSTEM ENGINE
+
+Mục tiêu:
+
+Mỗi người chơi có trải nghiệm khác nhau.
+
+## System Database
+
+* Sword God System
+* Alchemy System
+* Merchant System
+* Summoner System
+* Beast Taming System
+* Necromancer System
+
+## System Assignment
+
+Khi tạo nhân vật:
+
+AI cấp hệ thống ngẫu nhiên.
+
+Ví dụ:
+
+Player A → Sword God
+
+Player B → Alchemy
+
+Player C → Merchant
+
+## Rule Engine
+
+* Level
+* EXP
+* Skills
+* Inventory
+* Factions
+
+AI không được tự bịa.
+
+---
+
+# PHASE 3 — MEMORY ENGINE
+
+Mục tiêu:
+
+Thế giới nhớ người chơi.
+
+## Character Memory
+
+character_memories
+
+Ví dụ:
+
+* Từng cứu trưởng làng
+* Từng giết Hắc Long
+
+## NPC Memory
+
+npc_memories
+
+Ví dụ:
+
+* NPC nhớ người chơi
+* NPC ghét người chơi
+* NPC biết người chơi thuộc phe nào
+
+## World Memory
+
+world_memories
+
+Ví dụ:
+
+* Thành phố bị phá hủy
+* Boss đã bị tiêu diệt
+* Tông môn đã sụp đổ
+
+---
+
+# PHASE 4 — PERSISTENT WORLD
+
+Mục tiêu:
+
+Thế giới không reset.
+
+## World State
+
+* Thành phố
+* Tài nguyên
+* Boss
+* Kinh tế
+
+Ví dụ:
+
+Cây bị chặt hôm nay.
+
+Ngày mai vẫn mất.
+
+## Resource System
+
+* Gỗ
+* Đá
+* Linh thạch
+* Năng lượng
+
+## Economy System
+
+* Giá vật phẩm
+* Thương mại
+* Cung cầu
+
+---
+
+# PHASE 5 — AI NARRATIVE ENGINE
+
+Mục tiêu:
+
+Quest và cốt truyện được AI sinh động.
+
+## Dynamic Story
+
+Input:
+
+* Character
+* World
+* Memory
+* Faction
+
+Output:
+
+* Story
+* Choices
+* Rewards
+
+## Free Exploration
+
+Người chơi có thể:
+
+"Tôi muốn vào khu rừng phía Bắc."
+
+AI tự phản hồi.
+
+---
+
+# PHASE 6 — AI GAME MASTER
+
+Mục tiêu:
+
+AI quản trị thế giới.
+
+## Dynamic Events
+
+AI tự tạo:
+
+* Thiên tai
+* Boss
+* Bí cảnh
+* Chiến tranh
+
+## Reward System
+
+Người chơi làm việc tốt:
+
+→ Thưởng
+
+Người chơi phá luật:
+
+→ Phạt
+
+## World Monitoring
+
+AI quan sát:
+
+* Economy
+* PvP
+* Guilds
+* Population
+
+---
+
+# PHASE 7 — MULTI AGENT NPC
+
+Mục tiêu:
+
+NPC tự sống.
+
+## Agent Goals
+
+Trưởng làng:
+
+* Làm làng giàu
+
+Thương nhân:
+
+* Kiếm tiền
+
+Đạo tặc:
+
+* Cướp bóc
+
+## Agent Interaction
+
+NPC tự:
+
+* Giao tiếp
+* Mua bán
+* Chiến đấu
+* Kết hôn
+* Liên minh
+
+Không cần người chơi online.
+
+---
+
+# PHASE 8 — WORLD CREATOR
+
+Mục tiêu:
+
+Người chơi tạo thế giới riêng.
+
+## Create World
+
+Người chơi nhập:
+
+* Tên
+* Thể loại
+* Luật
+
+Ví dụ:
+
+"Huyền Thiên Giới"
+
+## AI Build World
+
+AI tự sinh:
+
+* Lịch sử
+* NPC
+* Boss
+* Factions
+* Economy
+
+---
+
+# PHASE 9 — AI WORLD GENERATOR
+
+Mục tiêu:
+
+AI tự tạo thế giới hoàn chỉnh.
+
+Ví dụ:
+
+World #29183
+
+Bối cảnh:
+
+* 3000 năm sau tận thế
+* 17 thành phố nổi
+* 5 phe phái
+
+AI tự sinh:
+
+* Lore
+* NPC
+* Quest
+* Boss
+* Dungeons
+* Items
+
+---
+
+# PHASE 10 — MULTIVERSE
+
+Mục tiêu:
+
+Nhiều thế giới cùng tồn tại.
+
+Ví dụ:
+
+Player A → Cultivation
+
+Player B → Cyberpunk
+
+Player C → Zombie
+
+Tất cả cùng nằm trên một nền tảng.
+
+## Cross World Events
+
+* World War
+* World Merge
+* Portal Events
+
+---
+
+# PHASE 11 — 3D WORLD
+
+Engine:
+
+* Unity
+* Unreal Engine 5
+
+AI vẫn điều khiển:
+
+* NPC
+* Quest
+* Story
+* Events
+
+---
+
+# PHASE 12 — VR / AR / MR / XR
+
+Thiết bị:
+
+* Meta Quest
+* Vision Pro
+* Android XR
+
+Người chơi bước vào thế giới.
+
+AI trực tiếp đóng vai:
+
+* Thiên Đạo
+* Chủ Thần
+* Hệ Thống
+
+---
+
+# MỤC TIÊU CUỐI
+
+Tạo một "Ready Player One + Sword Art Online + AI World Simulation".
+
+Không phải một game đơn lẻ.
+
+Mà là một nền tảng tạo vô số thế giới sống bằng AI.

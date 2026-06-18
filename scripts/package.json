@@ -1,0 +1,21 @@
+{
+  "name": "@workspace/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hello": "tsx ./src/hello.ts",
+    "roadmap": "tsx ./src/generate-roadmap.ts",
+    "story": "tsx ./src/story-fill.ts",
+    "story:live": "tsx ./src/story-interactive.ts",
+    "roadmap:game": "tsx ./src/roadmap-game.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

@@ -1,0 +1,6 @@
+- [Đọc TIENTRINHHETHONG.md trước](tientrinhhethong-protocol.md) — file tracking tiến trình build, LUÔN đọc đầu tiên khi mở dự án, build task [ ] đầu tiên rồi cập nhật file
+- [Schema export naming](schema-export-naming.md) — guildMembers (không phải guild_members), characterFaction (không phải character_faction) — camelCase trong Drizzle schema exports
+- [Phases 36-40 pattern](phases-36-40.md) — 5 phases mới tất cả đã build: HỘI CHỢ/DI DÂN/THÁM HIỂM/KỸ NĂNG/ĐIỆN TRUYỀN THUYẾT — dùng pattern schema→export→route→register→page→App.tsx→Dashboard
+- [Phases 41-45 pattern](phases-41-45.md) — ROADMAP TẠO THẾ GIỚI ẢO xong: characters dùng worldId không phải currentWorld; COSMIC_TIER_NAMES phải khai báo local trong route (không import từ schema)
+- [Phases 46-51 roadmap](phases-46-50.md) — Phase 51 NGOẠI GIAO NPC done; auth.ts thiếu /register + /login routes → "Không thể kết nối" — đã fix; diplomacy.ts là world-level (cũ), npcDiplomacy.ts là NPC-gov level (mới)
+- [Route path prefix rule](route-path-prefix.md) — app.use("/api", router) trong app.ts: routes BÊN TRONG router dùng /military/... KHÔNG phải /api/military/... — nếu dùng /api/ prefix sẽ bị 404 vì Express strip /api rồi mới match
