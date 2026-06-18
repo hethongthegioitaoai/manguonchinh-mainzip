@@ -77,6 +77,7 @@ import npcPlansRouter from "./npcPlans.js";
 import npcEmotionsRouter from "./npcEmotions.js";
 import personalityEvolutionRouter from "./personalityEvolution.js";
 import npcDialogueRouter from "./npcDialogue.js";
+import npcAgentRouter from "./npcAgent.js";
 
 const router: IRouter = Router();
 
@@ -158,5 +159,6 @@ router.use(npcPlansRouter);
 router.use(npcEmotionsRouter);
 router.use(personalityEvolutionRouter);
 router.use(npcDialogueRouter);
+router.use(npcAgentRouter);
 
 export default router;

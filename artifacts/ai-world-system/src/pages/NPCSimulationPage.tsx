@@ -548,6 +548,10 @@ export default function NPCSimulationPage() {
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all border border-gray-700 text-gray-500 hover:text-violet-400 hover:border-violet-500">
             <MessageCircle size={12} />ĐỐI THOẠI
           </button>
+          <button onClick={() => setLocation("/npc-agent")}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all border border-gray-700 text-gray-500 hover:text-violet-400 hover:border-violet-500">
+            <Brain size={12} />AGENT
+          </button>
           <button onClick={() => { setDetailTab("market"); loadMarket(); }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all border"
             style={{ borderColor: detailTab === "market" ? worldColor : "#374151", color: detailTab === "market" ? worldColor : "#6b7280", background: detailTab === "market" ? `${worldColor}18` : "transparent" }}>
