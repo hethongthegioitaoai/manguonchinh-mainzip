@@ -3,14 +3,36 @@ import type { Server } from "http";
 
 // ─── Unity-ready event types ────────────────────────────────────────────────
 
+export interface BattleEvent {
+  type: "battle";
+  worldSlug: string;
+  battleId: string;
+  winner: string;
+  loser: string;
+  winnerName: string;
+  loserName: string;
+  expGained: number;
+  goldReward: number;
+  territoryChanged: boolean;
+  timestamp: string;
+  // Player Agent fields (nếu có player tham chiến)
+  playerId?: string;
+  playerWon?: boolean;
+  levelUp?: boolean;
+  // Territory war fields (nếu battle liên quan lãnh thổ)
+  territoryId?: string;
+  territoryName?: string;
+  captured?: boolean;
+}
+
 export type UnityEvent =
   | { type: "npc_move";   worldSlug: string; npcId: string; name: string; fromPos: Pos | null; toPos: Pos; action: string }
-  | { type: "battle";     worldSlug: string; attacker: string; defender: string; winner: string; territory: string }
+  | BattleEvent
   | { type: "election";   worldSlug: string; govId: string; territory: string; electionType: string; winner: string }
   | { type: "diplomacy";  worldSlug: string; govA: string; govB: string; action: string; relation: string }
   | { type: "birth";      worldSlug: string; npcId: string; name: string; parentName: string; pos: Pos | null }
   | { type: "death";      worldSlug: string; npcId: string; name: string; pos: Pos | null; reason: string }
-  | { type: "war_start";  worldSlug: string; warId: string; attacker: string; defender: string }
+  | { type: "war_start";  worldSlug: string; warId: string; attacker: string; defender: string; reason?: string }
   | { type: "war_end";    worldSlug: string; warId: string; winner: string }
   | { type: "world_tick"; worldSlug: string; ts: number };
 

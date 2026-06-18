@@ -5,6 +5,7 @@ import { battles, characters, items, inventory } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { shouldDropItem, pickDropItem } from "../lib/itemTemplates.js";
 import { saveAndNotify } from "../lib/notify.js";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 
@@ -211,6 +212,37 @@ router.post("/battle/finish", isAuthenticated, async (req: any, res) => {
 
     if (leveledUp) {
       await saveAndNotify(userId, { type: "level_up", characterName: char.name, newLevel: updatedChar.level });
+    }
+
+    // ─── Unity Broadcast — battle finished ───────────────────────────────
+    try {
+      const playerWon = result === "win";
+      const isDraw    = result === "draw";
+
+      const winnerName = isDraw ? "Hòa" : (playerWon ? char.name : enemyName);
+      const loserName  = isDraw ? "Hòa" : (playerWon ? enemyName : char.name);
+      const winnerId   = isDraw ? "draw" : (playerWon ? char.id : "enemy");
+      const loserId    = isDraw ? "draw" : (playerWon ? "enemy" : char.id);
+
+      broadcastUnity({
+        type:             "battle",
+        worldSlug,
+        battleId:         battle.id,
+        winner:           winnerId,
+        loser:            loserId,
+        winnerName,
+        loserName,
+        expGained,
+        goldReward:       0,
+        territoryChanged: false,
+        timestamp:        new Date().toISOString(),
+        // Player Agent fields
+        playerId:         char.userId,
+        playerWon,
+        levelUp:          leveledUp,
+      });
+    } catch (broadcastErr) {
+      console.warn("[Unity] battle broadcast failed:", broadcastErr);
     }
 
     res.json({ battle, character: updatedChar, expGained, leveledUp, droppedItem, cultivationEnergyGained });
