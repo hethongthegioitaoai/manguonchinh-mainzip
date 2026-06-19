@@ -4,6 +4,7 @@ import { logger } from "./lib/logger.js";
 import { setupWebSocket } from "./lib/notify.js";
 import { setupUnityWebSocket } from "./lib/unityWs.js";
 import { tickAllWorlds } from "./routes/worldSimulation.js";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"] ?? "8080";
 
@@ -25,6 +26,29 @@ server.on("error", (err) => {
 server.listen(port, () => {
   logger.info({ port }, "Server listening");
 });
+
+// Graceful shutdown — đóng HTTP server + DB pool sạch khi nhận SIGTERM/SIGINT
+async function shutdown(signal: string) {
+  logger.info(`[shutdown] Nhận ${signal} — đang dừng server...`);
+  server.close(async (err) => {
+    if (err) logger.error({ err }, "[shutdown] HTTP server close error");
+    try {
+      await pool.end();
+      logger.info("[shutdown] DB pool đã đóng");
+    } catch (e) {
+      logger.error({ err: e }, "[shutdown] DB pool close error");
+    }
+    process.exit(err ? 1 : 0);
+  });
+  // Force exit nếu shutdown quá 10s
+  setTimeout(() => {
+    logger.warn("[shutdown] Timeout — force exit");
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 // World Simulation Heartbeat — tick all worlds every 60 minutes
 setTimeout(() => {
