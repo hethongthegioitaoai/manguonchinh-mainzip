@@ -101,7 +101,7 @@ router.get("/territories/:worldSlug", isAuthenticated, async (req, res) => {
    POST /api/territories/seed/:worldSlug
    Auto-seed territories for a world (idempotent — skips if already exist)
 ════════════════════════════════════════ */
-router.post("/territories/seed/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/territories/seed/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
