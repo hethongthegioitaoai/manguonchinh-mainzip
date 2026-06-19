@@ -1,0 +1,134 @@
+~/.../artifacts/api-server$ ^[[200~grep -R "insert(territories" src -n^[[201~
+grep -R "insert(territories"grep -R "insert(territories" src -n
+src/routes/territories.ts:117:      const [t] = await db.insert(territories).values({
+~/.../artifacts/api-server$ grep -R "insert(territories" src -n
+src/routes/territories.ts:117:      const [t] = await db.insert(territories).values({
+~/.../artifacts/api-server$ sed -n '80,160p' src/routes/territories.ts
+      const resources = await db.select().from(territoryResources).where(eq(territoryResources.territoryId, t.id));
+      const logs = await db.select().from(territoryLogs).where(eq(territoryLogs.territoryId, t.id)).orderBy(desc(territoryLogs.createdAt)).limit(5);
+
+      return {
+        ...t,
+        typeLabel: TYPE_LABELS[t.type] ?? t.type,
+        typeIcon:  TYPE_ICONS[t.type]  ?? "🏛️",
+        ownerFaction,
+        resources,
+        logs,
+      };
+    }));
+
+    return res.json({ territories: result });
+  } catch (err) {
+    console.error("[territories] GET error:", err);
+    return res.status(500).json({ error: "Lỗi tải lãnh thổ" });
+  }
+});
+
+/* ════════════════════════════════════════
+   POST /api/territories/seed/:worldSlug
+   Auto-seed territories for a world (idempotent — skips if already exist)
+════════════════════════════════════════ */
+router.post("/territories/seed/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+
+    const existing = await db.select({ id: territories.id }).from(territories).where(eq(territories.worldSlug, worldSlug));
+    if (existing.length >= 5) {
+      return res.json({ seeded: 0, message: "Lãnh thổ đã được khởi tạo trước đó" });
+    }
+
+    const types: Array<typeof territories.$inferInsert["type"]> = ["village", "village", "farmland", "harbor", "district"];
+    let seeded = 0;
+
+    for (const type of types) {
+      const [t] = await db.insert(territories).values({
+        worldSlug,
+        name:       genName(type as string),
+        type:       type as string,
+        population: rand(200, 2000),
+        prosperity: PROSPERITY_BASE[type as string] + rand(-10, 20),
+        security:   rand(30, 80),
+      }).returning();
+
+      /* Seed initial resources */
+      const cfg = HARVEST_CONFIG[type as string] ?? [];
+      for (const res of cfg) {
+        await db.insert(territoryResources).values({
+          territoryId: t.id,
+          resourceType: res.resource,
+          amount: rand(10, 50),
+        });
+      }
+
+      await db.insert(territoryLogs).values({ territoryId: t.id, event: `Lãnh thổ ${t.name} được khai phá và đưa vào bản đồ thế giới.` });
+      seeded++;
+    }
+
+    return res.json({ seeded, message: `Đã khởi tạo ${seeded} lãnh thổ cho thế giới` });
+  } catch (err) {
+    console.error("[territories] seed error:", err);
+    return res.status(500).json({ error: "Lỗi khởi tạo lãnh thổ" });
+  }
+});
+
+/* ════════════════════════════════════════
+   POST /api/territories/:territoryId/claim
+   Faction claims a territory
+   Body: { factionId }
+════════════════════════════════════════ */
+router.post("/territories/:territoryId/claim", isAuthenticated, async (req, res) => {
+  try {
+    const { territoryId } = req.params as Record<string, string>;
+    const { factionId } = req.body;
+
+    if (!factionId) return res.status(400).json({ error: "Thiếu factionId" });
+
+    const [t] = await db.select().from(territories).where(eq(territories.id, territoryId));
+    if (!t) return res.status(404).json({ error: "Không tìm thấy lãnh thổ" });
+~/.../artifacts/api-server$ curl -X POST http://localhost:8080/api/territories/seed/tu-tien
+curl: (7) Failed to connect to localhost port 8080 after 0 ms: Could not connect to server
+~/.../artifacts/api-server$ npm run dev
+
+> @workspace/api-server@0.0.0 dev
+> export NODE_ENV=development && node ./build.mjs --watch
+
+[watch] Initial build done — starting server
+[watch] Watching for changes...
+[watch] build finished, watching for changes...
+[SECURITY] ✅ Multi-layer security middleware applied
+[22:36:41.968] INFO (6040): Server listening
+    port: 8080
+curl -X POST http://localhost:8080/api/territories/seed/tu-tien
+[Simulation] ✅ Ticked 0 worlds
+const terrs = await db.select().from(territories)
+grep -n "territoriesRouter" src/routes/index.ts
+~/.../artifacts/api-server$ [22:37:46.535] INFO (6040): [shutdown] Nhận SIGINT — đang dừng server...
+[22:37:46.536] INFO (6040): [shutdown] DB pool đã đóng
+~/.../artifacts/api-server$ ^[[200~grep -n "territoriesRouter" src/routes/index.ts^[[201~
+grep -n "territoriesRouter" grep -n "territoriesRouter" src/routes/index.ts
+66:import territoriesRouter from "./territories.js";
+152:router.use(territoriesRouter);
+~/.../artifacts/api-server$ grep -n "territoriesRouter" src/routes/index.ts
+66:import territoriesRouter from "./territories.js";
+152:router.use(territoriesRouter);
+~/.../artifacts/api-server$ curl -i -X POST http://localhost:8080/api/territories/seed/tu-tien
+curl: (7) Failed to connect to localhost port 8080 after 0 ms: Could not connect to server
+~/.../artifacts/api-server$ curl -X POST http://localhost:8080/api/world-map/tu-tien/seed
+curl: (7) Failed to connect to localhost port 8080 after 0 ms: Could not connect to server
+~/.../artifacts/api-server$ npm run dev
+
+> @workspace/api-server@0.0.0 dev
+> export NODE_ENV=development && node ./build.mjs --watch
+
+[watch] Initial build done — starting server
+[watch] Watching for changes...
+[watch] build finished, watching for changes...
+[SECURITY] ✅ Multi-layer security middleware applied
+[22:38:22.561] INFO (6171): Server listening
+    port: 8080
+url -X POST http://localhost:8080/api/world-map/tu-tien/seed
+curl -X POST http://localhost:8080/api/world-map/tu-tien/seed
+[Simulation] ✅ Ticked 0 worlds
+~/.../artifacts/api-server$ [22:38:40.341] INFO (6171): [shutdown] Nhận SIGINT — đang dừng server...
+[22:38:40.342] INFO (6171): [shutdown] DB pool đã đóng
+~/.../artifacts/api-server$     

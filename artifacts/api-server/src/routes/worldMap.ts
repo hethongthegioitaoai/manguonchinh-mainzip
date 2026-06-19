@@ -15,9 +15,18 @@ import { eq, and, or, desc } from "drizzle-orm";
 const router = Router();
 
 const FACTION_PALETTE = [
-  "#22d3ee", "#a855f7", "#ef4444", "#f97316",
-  "#22c55e", "#eab308", "#ec4899", "#3b82f6",
-  "#14b8a6", "#f43f5e", "#8b5cf6", "#84cc16",
+  "#22d3ee",
+  "#a855f7",
+  "#ef4444",
+  "#f97316",
+  "#22c55e",
+  "#eab308",
+  "#ec4899",
+  "#3b82f6",
+  "#14b8a6",
+  "#f43f5e",
+  "#8b5cf6",
+  "#84cc16",
 ];
 
 function factionColor(id: string | null | undefined): string {
@@ -47,7 +56,9 @@ router.get("/world-map/player/me", isAuthenticated, async (req, res) => {
         gold: playerAgents.gold,
       })
       .from(playerAgents)
-      .where(and(eq(playerAgents.userId, userId), eq(playerAgents.isActive, true)))
+      .where(
+        and(eq(playerAgents.userId, userId), eq(playerAgents.isActive, true)),
+      )
       .limit(5);
     res.json(agents);
   } catch (e: any) {
@@ -118,7 +129,10 @@ router.get("/world-map/:worldSlug", isAuthenticated, async (req, res) => {
       })
       .from(playerAgents)
       .where(
-        and(eq(playerAgents.worldSlug, worldSlug), eq(playerAgents.isActive, true)),
+        and(
+          eq(playerAgents.worldSlug, worldSlug),
+          eq(playerAgents.isActive, true),
+        ),
       )
       .limit(50);
 
@@ -143,7 +157,7 @@ router.get("/world-map/:worldSlug", isAuthenticated, async (req, res) => {
 /* ──────────────────────────────────────────────────────
    POST /world-map/:worldSlug/seed — generate x,y,terrain
 ────────────────────────────────────────────────────── */
-router.post("/world-map/:worldSlug/seed", isAuthenticated, async (req, res) => {
+router.post("/world-map/:worldSlug/seed", async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const terrs = await db
@@ -158,8 +172,14 @@ router.post("/world-map/:worldSlug/seed", isAuthenticated, async (req, res) => {
     const cols = Math.ceil(Math.sqrt(N * 1.6));
     const rows = Math.ceil(N / cols);
     const TERRAINS = [
-      "plains", "plains", "plains", "forest",
-      "mountain", "desert", "swamp", "sea",
+      "plains",
+      "plains",
+      "plains",
+      "forest",
+      "mountain",
+      "desert",
+      "swamp",
+      "sea",
     ] as const;
 
     for (let i = 0; i < terrs.length; i++) {
@@ -177,7 +197,10 @@ router.post("/world-map/:worldSlug/seed", isAuthenticated, async (req, res) => {
         .where(eq(territories.id, terrs[i].id));
     }
 
-    res.json({ seeded: terrs.length, message: `Đã tạo vị trí cho ${terrs.length} lãnh thổ` });
+    res.json({
+      seeded: terrs.length,
+      message: `Đã tạo vị trí cho ${terrs.length} lãnh thổ`,
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -213,9 +236,13 @@ router.get("/world-map/territory/:id", isAuthenticated, async (req, res) => {
       .leftJoin(npcGovernments, eq(npcGovernments.territoryId, territories.id))
       .where(eq(territories.id, req.params.id as string));
 
-    if (!territory) return res.status(404).json({ error: "Lãnh thổ không tồn tại" });
+    if (!territory)
+      return res.status(404).json({ error: "Lãnh thổ không tồn tại" });
 
-    res.json({ ...territory, factionColor: factionColor(territory.ownerFactionId) });
+    res.json({
+      ...territory,
+      factionColor: factionColor(territory.ownerFactionId),
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -233,10 +260,14 @@ router.post("/world-map/player/move", isAuthenticated, async (req, res) => {
       .select()
       .from(playerAgents)
       .where(
-        and(eq(playerAgents.characterId, characterId), eq(playerAgents.userId, userId)),
+        and(
+          eq(playerAgents.characterId, characterId),
+          eq(playerAgents.userId, userId),
+        ),
       );
 
-    if (!agent) return res.status(404).json({ error: "Không tìm thấy Player Agent" });
+    if (!agent)
+      return res.status(404).json({ error: "Không tìm thấy Player Agent" });
 
     const [territory] = await db
       .select()
@@ -249,14 +280,19 @@ router.post("/world-map/player/move", isAuthenticated, async (req, res) => {
       );
 
     if (!territory)
-      return res.status(404).json({ error: "Lãnh thổ không tồn tại hoặc khác thế giới" });
+      return res
+        .status(404)
+        .json({ error: "Lãnh thổ không tồn tại hoặc khác thế giới" });
 
     await db
       .update(playerAgents)
       .set({ currentTerritoryId: toTerritoryId, updatedAt: new Date() })
       .where(eq(playerAgents.id, agent.id));
 
-    res.json({ success: true, territory: { id: territory.id, name: territory.name } });
+    res.json({
+      success: true,
+      territory: { id: territory.id, name: territory.name },
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -265,24 +301,28 @@ router.post("/world-map/player/move", isAuthenticated, async (req, res) => {
 /* ──────────────────────────────────────────────────────
    GET /world-map/:worldSlug/armies — active army movements
 ────────────────────────────────────────────────────── */
-router.get("/world-map/:worldSlug/armies", isAuthenticated, async (req, res) => {
-  try {
-    const { worldSlug } = req.params as Record<string, string>;
-    const armies = await db
-      .select()
-      .from(armyMovements)
-      .where(
-        and(
-          eq(armyMovements.worldSlug, worldSlug),
-          eq(armyMovements.status, "moving"),
-        ),
-      )
-      .orderBy(desc(armyMovements.startedAt))
-      .limit(20);
-    res.json(armies);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
+router.get(
+  "/world-map/:worldSlug/armies",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+      const { worldSlug } = req.params as Record<string, string>;
+      const armies = await db
+        .select()
+        .from(armyMovements)
+        .where(
+          and(
+            eq(armyMovements.worldSlug, worldSlug),
+            eq(armyMovements.status, "moving"),
+          ),
+        )
+        .orderBy(desc(armyMovements.startedAt))
+        .limit(20);
+      res.json(armies);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  },
+);
 
 export default router;
