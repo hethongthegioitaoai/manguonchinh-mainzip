@@ -26,6 +26,14 @@ async function getOidcConfig() {
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000;
+
+  if (!process.env.SESSION_SECRET) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET is required in production.");
+    }
+    logger.warn("SESSION_SECRET không được set — dùng fallback key cho dev. KHÔNG dùng trong production!");
+  }
+
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -34,7 +42,7 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET ?? "dev-fallback-secret-do-not-use-in-prod",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
