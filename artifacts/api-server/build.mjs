@@ -43,12 +43,9 @@ const plugins = [esbuildPluginPino({ transports: ["pino-pretty"] })];
 
 if (isWatch) {
   let serverProc = null;
+  let restarting = false;
 
-  function startServer() {
-    if (serverProc) {
-      serverProc.kill("SIGTERM");
-      serverProc = null;
-    }
+  function spawnServer() {
     serverProc = spawn(
       "node",
       ["--enable-source-maps", path.join(distDir, "index.mjs")],
@@ -59,6 +56,31 @@ if (isWatch) {
         console.error(`[watch] Server exited with code ${code}`);
       }
     });
+  }
+
+  function startServer() {
+    if (restarting) return;
+    if (!serverProc) {
+      spawnServer();
+      return;
+    }
+    restarting = true;
+    const dying = serverProc;
+    serverProc = null;
+
+    dying.once("exit", () => {
+      restarting = false;
+      spawnServer();
+    });
+
+    dying.kill("SIGTERM");
+
+    // Fallback: force-kill after 3s if SIGTERM is ignored
+    setTimeout(() => {
+      if (restarting) {
+        dying.kill("SIGKILL");
+      }
+    }, 3000);
   }
 
   const ctx = await esbuildContext({
