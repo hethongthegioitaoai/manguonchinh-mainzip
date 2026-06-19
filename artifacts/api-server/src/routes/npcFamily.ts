@@ -13,7 +13,7 @@ function rand(min: number, max: number) { return Math.floor(Math.random() * (max
    GET family record for an NPC
    Returns: family + spouse/father/mother/children info
 ════════════════════════════════════════ */
-router.get("/api/npc-family/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-family/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
 
@@ -68,7 +68,7 @@ router.get("/api/npc-family/:npcId", isAuthenticated, async (req, res) => {
    POST form a partnership (marriage)
    Requires: friendship > 70, happiness > 50
 ════════════════════════════════════════ */
-router.post("/api/npc-family/form-partner", isAuthenticated, async (req, res) => {
+router.post("/npc-family/form-partner", isAuthenticated, async (req, res) => {
   try {
     const { npcAId, npcBId } = req.body as { npcAId: string; npcBId: string };
     if (!npcAId || !npcBId || npcAId === npcBId)
@@ -140,7 +140,7 @@ router.post("/api/npc-family/form-partner", isAuthenticated, async (req, res) =>
    POST set parent-child link
    Body: { childId, fatherId?, motherId? }
 ════════════════════════════════════════ */
-router.post("/api/npc-family/set-parent", isAuthenticated, async (req, res) => {
+router.post("/npc-family/set-parent", isAuthenticated, async (req, res) => {
   try {
     const { childId, fatherId, motherId } = req.body as { childId: string; fatherId?: string; motherId?: string };
     if (!childId) return res.status(400).json({ message: "Thiếu childId" });
@@ -178,7 +178,7 @@ router.post("/api/npc-family/set-parent", isAuthenticated, async (req, res) => {
    POST auto-check + form partnerships
    Scans world for NPC pairs with friendship>70 + happiness>50
 ════════════════════════════════════════ */
-router.post("/api/npc-family/auto-match/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-family/auto-match/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));

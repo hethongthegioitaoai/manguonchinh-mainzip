@@ -43,7 +43,7 @@ async function adjustRate(worldSlug: string, direction: "up" | "down", amount: n
 /* ───────────────────────────────────────────────
    GET /api/world-economy/rates — tỷ giá tất cả thế giới
 ─────────────────────────────────────────────── */
-router.get("/api/world-economy/rates", isAuthenticated, async (_req, res) => {
+router.get("/world-economy/rates", isAuthenticated, async (_req, res) => {
   try {
     const currencies = await db.select().from(worldCurrencies)
       .orderBy(desc(worldCurrencies.volume24h));
@@ -60,7 +60,7 @@ router.get("/api/world-economy/rates", isAuthenticated, async (_req, res) => {
 /* ───────────────────────────────────────────────
    GET /api/world-economy/history — lịch sử giao dịch
 ─────────────────────────────────────────────── */
-router.get("/api/world-economy/history", isAuthenticated, async (req, res) => {
+router.get("/world-economy/history", isAuthenticated, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string || "30"), 100);
     const history = await db.select().from(currencyExchanges)
@@ -72,7 +72,7 @@ router.get("/api/world-economy/history", isAuthenticated, async (req, res) => {
 /* ───────────────────────────────────────────────
    GET /api/world-economy/:worldSlug — chi tiết 1 thế giới
 ─────────────────────────────────────────────── */
-router.get("/api/world-economy/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/world-economy/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const [currency] = await db.select().from(worldCurrencies).where(eq(worldCurrencies.worldSlug, worldSlug));
@@ -93,7 +93,7 @@ router.get("/api/world-economy/:worldSlug", isAuthenticated, async (req, res) =>
 /* ───────────────────────────────────────────────
    GET /api/world-economy/my-worlds — thế giới user sở hữu (để setup)
 ─────────────────────────────────────────────── */
-router.get("/api/world-economy/my-worlds", isAuthenticated, async (req, res) => {
+router.get("/world-economy/my-worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     // Lấy từ custom_worlds nếu có, hoặc return builtin worlds của user
@@ -108,7 +108,7 @@ router.get("/api/world-economy/my-worlds", isAuthenticated, async (req, res) => 
 /* ───────────────────────────────────────────────
    GET /api/world-economy/my-characters — nhân vật user để giao dịch
 ─────────────────────────────────────────────── */
-router.get("/api/world-economy/my-characters", isAuthenticated, async (req, res) => {
+router.get("/world-economy/my-characters", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const chars = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -119,7 +119,7 @@ router.get("/api/world-economy/my-characters", isAuthenticated, async (req, res)
 /* ───────────────────────────────────────────────
    POST /api/world-economy/setup — creator setup tiền tệ (AI đặt tên)
 ─────────────────────────────────────────────── */
-router.post("/api/world-economy/setup", isAuthenticated, async (req, res) => {
+router.post("/world-economy/setup", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug, worldName, worldTheme, customName, customSymbol } = z.object({
@@ -184,7 +184,7 @@ Chỉ trả JSON, không giải thích thêm.`;
 /* ───────────────────────────────────────────────
    POST /api/world-economy/exchange — đổi tiền giữa 2 thế giới
 ─────────────────────────────────────────────── */
-router.post("/api/world-economy/exchange", isAuthenticated, async (req, res) => {
+router.post("/world-economy/exchange", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId, fromWorldSlug, toWorldSlug, fromAmount } = z.object({
@@ -268,7 +268,7 @@ router.post("/api/world-economy/exchange", isAuthenticated, async (req, res) => 
 /* ───────────────────────────────────────────────
    POST /api/world-economy/tax/:worldSlug — owner đặt thuế suất
 ─────────────────────────────────────────────── */
-router.post("/api/world-economy/tax/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/world-economy/tax/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -293,7 +293,7 @@ router.post("/api/world-economy/tax/:worldSlug", isAuthenticated, async (req, re
 /* ───────────────────────────────────────────────
    POST /api/world-economy/treasury/spend/:worldSlug — owner chi tiêu kho bạc
 ─────────────────────────────────────────────── */
-router.post("/api/world-economy/treasury/spend/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/world-economy/treasury/spend/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;

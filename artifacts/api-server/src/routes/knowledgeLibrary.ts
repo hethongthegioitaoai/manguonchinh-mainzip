@@ -98,7 +98,7 @@ const BONUS_POOL = [
 function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
 /* GET /api/library/:worldSlug */
-router.get("/api/library/:worldSlug", async (req, res) => {
+router.get("/library/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const { category, q } = req.query as { category?: string; q?: string };
@@ -132,7 +132,7 @@ router.get("/api/library/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/library/seed/:worldSlug — seed default lore */
-router.post("/api/library/seed/:worldSlug", async (req, res) => {
+router.post("/library/seed/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const existing = await db.select().from(knowledgeEntries)
@@ -173,7 +173,7 @@ router.post("/api/library/seed/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/library/generate/:worldSlug — AI-generate a new lore entry */
-router.post("/api/library/generate/:worldSlug", async (req, res) => {
+router.post("/library/generate/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const { category } = req.body as { category?: string };
@@ -205,7 +205,7 @@ router.post("/api/library/generate/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/library/research/:entryId — study an entry */
-router.post("/api/library/research/:entryId", async (req, res) => {
+router.post("/library/research/:entryId", async (req, res) => {
   try {
     const { entryId } = req.params;
     const { characterId, characterName } = req.body as { characterId: string; characterName?: string };

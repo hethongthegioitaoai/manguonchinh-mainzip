@@ -74,7 +74,7 @@ async function getOrInitAgent(characterId: string, userId: string) {
    GET /api/player-agent/:characterId
    Hồ sơ đầy đủ người chơi
 ══════════════════════════════════════════════════════ */
-router.get("/api/player-agent/:characterId", isAuthenticated, async (req: any, res) => {
+router.get("/player-agent/:characterId", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const userId = req.userId;
@@ -150,7 +150,7 @@ router.get("/api/player-agent/:characterId", isAuthenticated, async (req: any, r
    POST /api/player-agent/init
    Khởi tạo Player Agent từ character có sẵn
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/init", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/init", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.body as { characterId: string };
     const userId = req.userId;
@@ -171,7 +171,7 @@ router.post("/api/player-agent/init", isAuthenticated, async (req: any, res) => 
    POST /api/player-agent/:characterId/talk/:npcId
    Nói chuyện với NPC — ghi nhớ quan hệ tự động
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/:characterId/talk/:npcId", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/talk/:npcId", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId, npcId } = req.params;
     const { message } = req.body as { message: string };
@@ -246,7 +246,7 @@ const tradeSchema = z.object({
   counterType:  z.enum(["market", "npc", "player"]).optional(),
 });
 
-router.post("/api/player-agent/:characterId/trade", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/trade", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const userId = req.userId;
@@ -313,7 +313,7 @@ router.post("/api/player-agent/:characterId/trade", isAuthenticated, async (req:
    POST /api/player-agent/:characterId/run-for-election
    Tranh cử vào chính quyền NPC
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/:characterId/run-for-election", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/run-for-election", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const { electionId, platform, worldSlug } = req.body as {
@@ -365,7 +365,7 @@ router.post("/api/player-agent/:characterId/run-for-election", isAuthenticated, 
    POST /api/player-agent/:characterId/join-war/:warId
    Tham gia chiến tranh
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/:characterId/join-war/:warId", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/join-war/:warId", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId, warId } = req.params;
     const { side = "attacker" } = req.body as { side?: "attacker" | "defender" };
@@ -441,7 +441,7 @@ const BUSINESS_INCOME: Record<string, number> = {
   shop: 20, farm: 15, workshop: 25, inn: 30, guild: 40, bank: 50, trade_post: 35, mine: 22,
 };
 
-router.post("/api/player-agent/:characterId/found-business", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/found-business", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const userId = req.userId;
@@ -492,7 +492,7 @@ router.post("/api/player-agent/:characterId/found-business", isAuthenticated, as
    POST /api/player-agent/:characterId/join-faction/:factionId
    Gia nhập phe phái
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/:characterId/join-faction/:factionId", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/join-faction/:factionId", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId, factionId } = req.params;
     const { role = "member", factionSource = "npc" } = req.body as { role?: string; factionSource?: "npc" | "player" };
@@ -548,7 +548,7 @@ router.post("/api/player-agent/:characterId/join-faction/:factionId", isAuthenti
    POST /api/player-agent/:characterId/add-family
    Thêm thành viên gia đình
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/:characterId/add-family", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/add-family", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const { relType, targetId, targetName, targetType = "npc", familyName } = req.body as {
@@ -578,7 +578,7 @@ router.post("/api/player-agent/:characterId/add-family", isAuthenticated, async 
    POST /api/player-agent/:characterId/collect-income
    Thu nhập từ doanh nghiệp
 ══════════════════════════════════════════════════════ */
-router.post("/api/player-agent/:characterId/collect-income", isAuthenticated, async (req: any, res) => {
+router.post("/player-agent/:characterId/collect-income", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const userId = req.userId;
@@ -623,7 +623,7 @@ router.post("/api/player-agent/:characterId/collect-income", isAuthenticated, as
    GET /api/player-agent/:characterId/world-context
    Ngữ cảnh thế giới dành cho người chơi
 ══════════════════════════════════════════════════════ */
-router.get("/api/player-agent/:characterId/world-context", isAuthenticated, async (req: any, res) => {
+router.get("/player-agent/:characterId/world-context", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const userId = req.userId;
@@ -658,7 +658,7 @@ router.get("/api/player-agent/:characterId/world-context", isAuthenticated, asyn
    PATCH /api/player-agent/:characterId
    Cập nhật thông tin agent
 ══════════════════════════════════════════════════════ */
-router.patch("/api/player-agent/:characterId", isAuthenticated, async (req: any, res) => {
+router.patch("/player-agent/:characterId", isAuthenticated, async (req: any, res) => {
   try {
     const { characterId } = req.params;
     const userId = req.userId;
@@ -689,7 +689,7 @@ router.patch("/api/player-agent/:characterId", isAuthenticated, async (req: any,
    GET /api/player-agent/list
    Danh sách agent của user hiện tại
 ══════════════════════════════════════════════════════ */
-router.get("/api/player-agent/list", isAuthenticated, async (req: any, res) => {
+router.get("/player-agent/list", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId;
     const agents = await db.select({

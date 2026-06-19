@@ -390,7 +390,7 @@ function computeEmotionDelta(playerMsg: string, significance: string): Record<st
    ROUTE: GET /api/npc-dialogue/context/:npcId
    Lấy context đầy đủ của một NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-dialogue/context/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-dialogue/context/:npcId", isAuthenticated, async (req, res) => {
   try {
     const ctx = await buildNpcContext(req.params.npcId as string);
     if (!ctx) return res.status(404).json({ message: "Không tìm thấy NPC" });
@@ -405,7 +405,7 @@ router.get("/api/npc-dialogue/context/:npcId", isAuthenticated, async (req, res)
    ROUTE: POST /api/npc-dialogue
    Main dialogue endpoint
 ════════════════════════════════════════ */
-router.post("/api/npc-dialogue", isAuthenticated, async (req, res) => {
+router.post("/npc-dialogue", isAuthenticated, async (req, res) => {
   try {
     const { npc_id, player_message, player_id = "guest" } = req.body;
 
@@ -499,7 +499,7 @@ router.post("/api/npc-dialogue", isAuthenticated, async (req, res) => {
    ROUTE: GET /api/npc-dialogue/history/:npcId
    Lấy lịch sử hội thoại + ký ức
 ════════════════════════════════════════ */
-router.get("/api/npc-dialogue/history/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-dialogue/history/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const playerId = (req.query.player_id as string) ?? "guest";
@@ -526,7 +526,7 @@ router.get("/api/npc-dialogue/history/:npcId", isAuthenticated, async (req, res)
    ROUTE: GET /api/npc-dialogue/list/:worldSlug
    Lấy danh sách NPC có thể chat trong thế giới
 ════════════════════════════════════════ */
-router.get("/api/npc-dialogue/list/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-dialogue/list/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({

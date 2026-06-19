@@ -38,7 +38,7 @@ Hãy tạo một LỜI TIÊN TRI cho thế giới này. Trả về JSON (không 
 }
 
 // GET /api/prophecy/:worldSlug — xem tiên tri active + history
-router.get("/api/prophecy/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/prophecy/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -64,7 +64,7 @@ router.get("/api/prophecy/:worldSlug", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/prophecy/generate/:worldSlug — AI sinh prophecy mới (trigger thủ công)
-router.post("/api/prophecy/generate/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/prophecy/generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -106,7 +106,7 @@ const claimSchema = z.object({
 });
 
 // POST /api/prophecy/claim/:prophecyId — nhân vật submit claim
-router.post("/api/prophecy/claim/:prophecyId", isAuthenticated, async (req, res) => {
+router.post("/prophecy/claim/:prophecyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { prophecyId } = req.params as Record<string, string>;
@@ -192,7 +192,7 @@ Chỉ trả về số nguyên từ 0 đến 100.`;
 });
 
 // GET /api/prophecy/claims/:prophecyId — xem tất cả claims (creator only)
-router.get("/api/prophecy/claims/:prophecyId", isAuthenticated, async (req, res) => {
+router.get("/prophecy/claims/:prophecyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { prophecyId } = req.params as Record<string, string>;
@@ -220,7 +220,7 @@ router.get("/api/prophecy/claims/:prophecyId", isAuthenticated, async (req, res)
 });
 
 // POST /api/prophecy/judge/:claimId — creator approve/reject claim thủ công
-router.post("/api/prophecy/judge/:claimId", isAuthenticated, async (req, res) => {
+router.post("/prophecy/judge/:claimId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { claimId } = req.params as Record<string, string>;

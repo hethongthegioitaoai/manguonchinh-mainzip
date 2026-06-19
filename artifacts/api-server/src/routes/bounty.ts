@@ -22,7 +22,7 @@ async function settleExpiredBounties() {
 /* ─────────────────────────────────────────────────────
    GET /api/bounties/active — danh sách bounty đang active (public)
 ───────────────────────────────────────────────────── */
-router.get("/api/bounties/active", isAuthenticated, async (_req, res) => {
+router.get("/bounties/active", isAuthenticated, async (_req, res) => {
   try {
     await settleExpiredBounties();
     const list = await db.select().from(bounties)
@@ -35,7 +35,7 @@ router.get("/api/bounties/active", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/bounties/my — bounty của mình (đặt + bị đặt)
 ───────────────────────────────────────────────────── */
-router.get("/api/bounties/my", isAuthenticated, async (req, res) => {
+router.get("/bounties/my", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -60,7 +60,7 @@ router.get("/api/bounties/my", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/bounties/leaderboard — top bị truy nã
 ───────────────────────────────────────────────────── */
-router.get("/api/bounties/leaderboard", isAuthenticated, async (_req, res) => {
+router.get("/bounties/leaderboard", isAuthenticated, async (_req, res) => {
   try {
     const result = await db.execute(sql`
       SELECT target_char_id, target_char_name, target_world_slug,
@@ -76,7 +76,7 @@ router.get("/api/bounties/leaderboard", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bounties/post — đặt tiền truy nã
 ───────────────────────────────────────────────────── */
-router.post("/api/bounties/post", isAuthenticated, async (req, res) => {
+router.post("/bounties/post", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { targetCharId, reward, reason } = z.object({
@@ -119,7 +119,7 @@ router.post("/api/bounties/post", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bounties/claim/:bountyId — claim tiền thưởng
 ───────────────────────────────────────────────────── */
-router.post("/api/bounties/claim/:bountyId", isAuthenticated, async (req, res) => {
+router.post("/bounties/claim/:bountyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { bountyId } = req.params as Record<string, string>;
@@ -154,7 +154,7 @@ router.post("/api/bounties/claim/:bountyId", isAuthenticated, async (req, res) =
 /* ─────────────────────────────────────────────────────
    DELETE /api/bounties/:bountyId — hủy bounty (mất 50% tiền)
 ───────────────────────────────────────────────────── */
-router.delete("/api/bounties/:bountyId", isAuthenticated, async (req, res) => {
+router.delete("/bounties/:bountyId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { bountyId } = req.params as Record<string, string>;

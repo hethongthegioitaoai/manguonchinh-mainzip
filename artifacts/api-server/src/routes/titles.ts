@@ -122,7 +122,7 @@ async function checkAndGrantTitles(characterId: string): Promise<string[]> {
 }
 
 // GET /api/titles/:characterId — tất cả danh hiệu + unlocked status
-router.get("/api/titles/:characterId", isAuthenticated, async (req, res) => {
+router.get("/titles/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.params as Record<string, string>;
@@ -154,7 +154,7 @@ router.get("/api/titles/:characterId", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/titles/my-chars — nhân vật của user
-router.get("/api/titles/my-chars", isAuthenticated, async (req, res) => {
+router.get("/titles/my-chars", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const chars = await db.select({ id: characters.id, name: characters.name, level: characters.level, stats: characters.stats })
@@ -166,7 +166,7 @@ router.get("/api/titles/my-chars", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/titles/equip/:characterId — trang bị danh hiệu
-router.post("/api/titles/equip/:characterId", isAuthenticated, async (req, res) => {
+router.post("/titles/equip/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.params as Record<string, string>;
@@ -190,7 +190,7 @@ router.post("/api/titles/equip/:characterId", isAuthenticated, async (req, res) 
 });
 
 // POST /api/titles/unequip/:characterId — gỡ danh hiệu
-router.post("/api/titles/unequip/:characterId", isAuthenticated, async (req, res) => {
+router.post("/titles/unequip/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.params as Record<string, string>;

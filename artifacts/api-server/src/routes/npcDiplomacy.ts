@@ -61,7 +61,7 @@ async function getOrCreateRelation(govAId: string, govBId: string) {
 }
 
 /* GET /api/npc-diplomacy */
-router.get("/api/npc-diplomacy", async (_req, res) => {
+router.get("/npc-diplomacy", async (_req, res) => {
   try {
     const govs    = await db.select().from(npcGovernments).limit(50);
     const rels    = await db.select().from(diplomaticRelations).orderBy(desc(diplomaticRelations.updatedAt)).limit(100);
@@ -83,7 +83,7 @@ router.get("/api/npc-diplomacy", async (_req, res) => {
 });
 
 /* POST /api/npc-diplomacy/init — sinh quan hệ ban đầu giữa tất cả chính phủ */
-router.post("/api/npc-diplomacy/init", async (_req, res) => {
+router.post("/npc-diplomacy/init", async (_req, res) => {
   try {
     const govs = await db.select().from(npcGovernments).limit(20);
     if (govs.length < 2) return res.status(400).json({ error: "Cần ít nhất 2 chính phủ NPC" });
@@ -115,7 +115,7 @@ router.post("/api/npc-diplomacy/init", async (_req, res) => {
 });
 
 /* POST /api/npc-diplomacy/action */
-router.post("/api/npc-diplomacy/action", async (req, res) => {
+router.post("/npc-diplomacy/action", async (req, res) => {
   try {
     const { governmentAId, governmentBId, action } = req.body as {
       governmentAId?: string; governmentBId?: string; action?: string;
@@ -188,7 +188,7 @@ router.post("/api/npc-diplomacy/action", async (req, res) => {
 });
 
 /* POST /api/npc-diplomacy/ai-tick — AI tự điều chỉnh quan hệ */
-router.post("/api/npc-diplomacy/ai-tick", async (_req, res) => {
+router.post("/npc-diplomacy/ai-tick", async (_req, res) => {
   try {
     const rels = await db.select().from(diplomaticRelations).limit(50);
     let adjusted = 0;
@@ -222,7 +222,7 @@ router.post("/api/npc-diplomacy/ai-tick", async (_req, res) => {
 });
 
 /* GET /api/npc-diplomacy/memory/:govId */
-router.get("/api/npc-diplomacy/memory/:govId", async (req, res) => {
+router.get("/npc-diplomacy/memory/:govId", async (req, res) => {
   try {
     const mems = await db.select().from(diplomaticMemories)
       .where(eq(diplomaticMemories.governmentId, req.params.govId))

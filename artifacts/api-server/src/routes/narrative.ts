@@ -180,7 +180,7 @@ LUẬT:
 - Nếu boss đã chết: không cho boss đó xuất hiện, NPC biết sự kiện này`;
 }
 
-router.post("/api/narrative/generate", isAuthenticated, async (req: any, res) => {
+router.post("/narrative/generate", isAuthenticated, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId, choiceLabel, history, freeInput } = req.body;

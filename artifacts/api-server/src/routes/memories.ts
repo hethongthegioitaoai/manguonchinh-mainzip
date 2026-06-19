@@ -6,7 +6,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 const router = Router();
 
-router.get("/api/memories/:characterId", isAuthenticated, async (req: any, res) => {
+router.get("/memories/:characterId", isAuthenticated, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.params;
@@ -30,7 +30,7 @@ router.get("/api/memories/:characterId", isAuthenticated, async (req: any, res) 
   }
 });
 
-router.post("/api/memories/:characterId", isAuthenticated, async (req: any, res) => {
+router.post("/memories/:characterId", isAuthenticated, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.params;
@@ -61,7 +61,7 @@ router.post("/api/memories/:characterId", isAuthenticated, async (req: any, res)
   }
 });
 
-router.delete("/api/memories/:characterId/:memoryId", isAuthenticated, async (req: any, res) => {
+router.delete("/memories/:characterId/:memoryId", isAuthenticated, async (req: any, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId, memoryId } = req.params;
@@ -82,7 +82,7 @@ router.delete("/api/memories/:characterId/:memoryId", isAuthenticated, async (re
   }
 });
 
-router.get("/api/world-memories/:worldSlug", isAuthenticated, async (_req: any, res) => {
+router.get("/world-memories/:worldSlug", isAuthenticated, async (_req: any, res) => {
   try {
     const { worldSlug } = _req.params;
     const events = await db

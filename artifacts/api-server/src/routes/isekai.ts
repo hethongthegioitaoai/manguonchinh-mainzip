@@ -32,7 +32,7 @@ function pickIsekaiClass(genre: string): string {
 }
 
 // GET /api/isekai/my — lịch sử xuyên không của user
-router.get("/api/isekai/my", isAuthenticated, async (req, res) => {
+router.get("/isekai/my", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const records = await db.select().from(isekaiRecords)
@@ -47,7 +47,7 @@ router.get("/api/isekai/my", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/isekai/record/:id — chi tiết 1 record
-router.get("/api/isekai/record/:id", isAuthenticated, async (req, res) => {
+router.get("/isekai/record/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [record] = await db.select().from(isekaiRecords)
@@ -60,7 +60,7 @@ router.get("/api/isekai/record/:id", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/isekai/worlds — danh sách thế giới user có nhân vật (nguồn)
-router.get("/api/isekai/worlds", isAuthenticated, async (req, res) => {
+router.get("/isekai/worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const myChars = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -71,7 +71,7 @@ router.get("/api/isekai/worlds", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/isekai/enter — kích hoạt cổng xuyên không
-router.post("/api/isekai/enter", isAuthenticated, async (req, res) => {
+router.post("/isekai/enter", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.body;

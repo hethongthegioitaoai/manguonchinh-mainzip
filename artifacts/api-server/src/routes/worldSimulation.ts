@@ -177,7 +177,7 @@ export async function tickAllWorlds(): Promise<void> {
 ═══════════════════════════════════════════════ */
 
 /* GET /api/simulation/state/:worldSlug */
-router.get("/api/simulation/state/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/simulation/state/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     let [state] = await db.select().from(worldSimState).where(eq(worldSimState.worldSlug, worldSlug));
@@ -190,7 +190,7 @@ router.get("/api/simulation/state/:worldSlug", isAuthenticated, async (req, res)
 });
 
 /* GET /api/simulation/logs/:worldSlug */
-router.get("/api/simulation/logs/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/simulation/logs/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const limit = Math.min(Number(req.query.limit) || 20, 50);
@@ -203,7 +203,7 @@ router.get("/api/simulation/logs/:worldSlug", isAuthenticated, async (req, res) 
 });
 
 /* GET /api/simulation/feed — global event feed */
-router.get("/api/simulation/feed", isAuthenticated, async (req, res) => {
+router.get("/simulation/feed", isAuthenticated, async (req, res) => {
   try {
     const logs = await db.select().from(worldSimLog)
       .orderBy(desc(worldSimLog.happenedAt))
@@ -213,7 +213,7 @@ router.get("/api/simulation/feed", isAuthenticated, async (req, res) => {
 });
 
 /* GET /api/simulation/all — all world states */
-router.get("/api/simulation/all", isAuthenticated, async (req, res) => {
+router.get("/simulation/all", isAuthenticated, async (req, res) => {
   try {
     const states = await db.select().from(worldSimState)
       .where(eq(worldSimState.isActive, true))
@@ -223,7 +223,7 @@ router.get("/api/simulation/all", isAuthenticated, async (req, res) => {
 });
 
 /* POST /api/simulation/tick/:worldSlug — manual tick */
-router.post("/api/simulation/tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/simulation/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const result = await tickWorld(worldSlug);
@@ -232,7 +232,7 @@ router.post("/api/simulation/tick/:worldSlug", isAuthenticated, async (req, res)
 });
 
 /* POST /api/simulation/tick/all — tick all (admin / heartbeat) */
-router.post("/api/simulation/tick/all", isAuthenticated, async (_req, res) => {
+router.post("/simulation/tick/all", isAuthenticated, async (_req, res) => {
   try {
     await tickAllWorlds();
     res.json({ ok: true });

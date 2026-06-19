@@ -48,7 +48,7 @@ async function ensureCosmicEntity(userId: string) {
 }
 
 // GET /api/cosmos/map
-router.get("/api/cosmos/map", isAuthenticated, async (_req: any, res) => {
+router.get("/cosmos/map", isAuthenticated, async (_req: any, res) => {
   try {
     const entities = await db.select().from(cosmicEntities).orderBy(desc(cosmicEntities.powerScore)).limit(50);
     res.json({ entities });
@@ -58,7 +58,7 @@ router.get("/api/cosmos/map", isAuthenticated, async (_req: any, res) => {
 });
 
 // GET /api/cosmos/my
-router.get("/api/cosmos/my", isAuthenticated, async (req: any, res) => {
+router.get("/cosmos/my", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId as string;
     const entities = await ensureCosmicEntity(userId);
@@ -74,7 +74,7 @@ router.get("/api/cosmos/my", isAuthenticated, async (req: any, res) => {
 });
 
 // POST /api/cosmos/ascend/:entityId
-router.post("/api/cosmos/ascend/:entityId", isAuthenticated, async (req: any, res) => {
+router.post("/cosmos/ascend/:entityId", isAuthenticated, async (req: any, res) => {
   try {
     const { entityId } = req.params;
     const userId = req.userId as string;
@@ -136,7 +136,7 @@ router.post("/api/cosmos/ascend/:entityId", isAuthenticated, async (req: any, re
 });
 
 // GET /api/cosmos/rankings
-router.get("/api/cosmos/rankings", isAuthenticated, async (_req: any, res) => {
+router.get("/cosmos/rankings", isAuthenticated, async (_req: any, res) => {
   try {
     const entities = await db.select().from(cosmicEntities)
       .orderBy(desc(cosmicEntities.tier), desc(cosmicEntities.powerScore))
@@ -155,7 +155,7 @@ router.get("/api/cosmos/rankings", isAuthenticated, async (_req: any, res) => {
 });
 
 // POST /api/cosmos/event/trigger
-router.post("/api/cosmos/event/trigger", isAuthenticated, async (req: any, res) => {
+router.post("/cosmos/event/trigger", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId as string;
     const entities = await db.select().from(cosmicEntities).where(eq(cosmicEntities.ownerUserId, userId));

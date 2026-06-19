@@ -74,7 +74,7 @@ function randomFighter(worldSlug: string): { id: string; name: string; world: st
 }
 
 /* GET /api/divine-arena */
-router.get("/api/divine-arena", async (req, res) => {
+router.get("/divine-arena", async (req, res) => {
   try {
     const matches = await db.select().from(divineArenaMatches)
       .orderBy(desc(divineArenaMatches.matchedAt)).limit(30);
@@ -92,7 +92,7 @@ router.get("/api/divine-arena", async (req, res) => {
 });
 
 /* POST /api/divine-arena/match — create + resolve a single match */
-router.post("/api/divine-arena/match", async (req, res) => {
+router.post("/divine-arena/match", async (req, res) => {
   try {
     const { challengerWorld, defenderWorld, ruleSet } = req.body as {
       challengerWorld?: string; defenderWorld?: string; ruleSet?: string;
@@ -164,7 +164,7 @@ router.post("/api/divine-arena/match", async (req, res) => {
 });
 
 /* POST /api/divine-arena/tournament — run 5 matches at once */
-router.post("/api/divine-arena/tournament", async (req, res) => {
+router.post("/divine-arena/tournament", async (req, res) => {
   try {
     const worlds = ["cultivation","cyberpunk","wasteland"];
     const results: any[] = [];

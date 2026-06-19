@@ -246,7 +246,7 @@ const SEED_DATA: Record<string, Array<{
 /* ════════════════════════════════════════
    GET all NPC cores for a world
 ════════════════════════════════════════ */
-router.get("/api/npc-core/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-core/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1))).orderBy(npcCores.createdAt);
@@ -262,7 +262,7 @@ router.get("/api/npc-core/:worldSlug", isAuthenticated, async (req, res) => {
 /* ════════════════════════════════════════
    POST seed NPCs for a world
 ════════════════════════════════════════ */
-router.post("/api/npc-core/seed/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-core/seed/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const existing = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug)).limit(1);
@@ -297,7 +297,7 @@ router.post("/api/npc-core/seed/:worldSlug", isAuthenticated, async (req, res) =
 /* ════════════════════════════════════════
    POST run world cycle tick
 ════════════════════════════════════════ */
-router.post("/api/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
@@ -547,7 +547,7 @@ router.post("/api/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) =
 /* ════════════════════════════════════════
    GET market data for a world
 ════════════════════════════════════════ */
-router.get("/api/npc-market/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-market/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     await seedMarket(worldSlug);
@@ -572,7 +572,7 @@ router.get("/api/npc-market/:worldSlug", isAuthenticated, async (req, res) => {
 /* ════════════════════════════════════════
    GET economy data for a single NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-economy/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-economy/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const [npc] = await db.select().from(npcCores).where(eq(npcCores.id, npcId));
@@ -587,7 +587,7 @@ router.get("/api/npc-economy/:npcId", isAuthenticated, async (req, res) => {
 /* ════════════════════════════════════════
    GET relationships for a single NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-relationships/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-relationships/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const rows = await db.select().from(npcRelationships).where(or(eq(npcRelationships.npcAId, npcId), eq(npcRelationships.npcBId, npcId))).orderBy(desc(npcRelationships.updatedAt));
@@ -605,7 +605,7 @@ router.get("/api/npc-relationships/:npcId", isAuthenticated, async (req, res) =>
 /* ════════════════════════════════════════
    GET memories of a single NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-core/:npcId/memories", isAuthenticated, async (req, res) => {
+router.get("/npc-core/:npcId/memories", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const memories = await db.select().from(npcCoreMemories).where(eq(npcCoreMemories.npcCoreId, npcId)).orderBy(desc(npcCoreMemories.timestamp)).limit(20);
@@ -616,7 +616,7 @@ router.get("/api/npc-core/:npcId/memories", isAuthenticated, async (req, res) =>
 /* ════════════════════════════════════════
    GET single NPC detail
 ════════════════════════════════════════ */
-router.get("/api/npc-core/detail/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-core/detail/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const [npc] = await db.select().from(npcCores).where(eq(npcCores.id, npcId));

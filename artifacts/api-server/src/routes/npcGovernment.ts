@@ -37,7 +37,7 @@ function govTypeForTerritory(type: string, population: number): string {
    GET /api/npc-government/:worldSlug
    All governments with leader + logs
 ════════════════════════════════════════ */
-router.get("/api/npc-government/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-government/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -89,7 +89,7 @@ router.get("/api/npc-government/:worldSlug", isAuthenticated, async (req, res) =
    Create governments for all territories that
    don't have one. Elect leader from resident NPCs.
 ════════════════════════════════════════ */
-router.post("/api/npc-government/establish/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-government/establish/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -173,7 +173,7 @@ router.post("/api/npc-government/establish/:worldSlug", isAuthenticated, async (
    POST /api/npc-government/collect-taxes/:worldSlug
    Collect taxes from NPC income + market activity
 ════════════════════════════════════════ */
-router.post("/api/npc-government/collect-taxes/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-government/collect-taxes/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -247,7 +247,7 @@ router.post("/api/npc-government/collect-taxes/:worldSlug", isAuthenticated, asy
    Recalculate approval based on prosperity,
    security, tax rate, and NPC happiness (food proxy)
 ════════════════════════════════════════ */
-router.post("/api/npc-government/update-approval/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-government/update-approval/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 

@@ -61,7 +61,7 @@ function genName(type: string): string {
    GET /api/territories/:worldSlug
    All territories with owner faction + resources
 ════════════════════════════════════════ */
-router.get("/api/territories/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/territories/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -101,7 +101,7 @@ router.get("/api/territories/:worldSlug", isAuthenticated, async (req, res) => {
    POST /api/territories/seed/:worldSlug
    Auto-seed territories for a world (idempotent — skips if already exist)
 ════════════════════════════════════════ */
-router.post("/api/territories/seed/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/territories/seed/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -149,7 +149,7 @@ router.post("/api/territories/seed/:worldSlug", isAuthenticated, async (req, res
    Faction claims a territory
    Body: { factionId }
 ════════════════════════════════════════ */
-router.post("/api/territories/:territoryId/claim", isAuthenticated, async (req, res) => {
+router.post("/territories/:territoryId/claim", isAuthenticated, async (req, res) => {
   try {
     const { territoryId } = req.params as Record<string, string>;
     const { factionId } = req.body;
@@ -186,7 +186,7 @@ router.post("/api/territories/:territoryId/claim", isAuthenticated, async (req, 
    Run resource harvest for all territories in world
    — adds resources, updates prosperity, logs events
 ════════════════════════════════════════ */
-router.post("/api/territories/harvest/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/territories/harvest/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 

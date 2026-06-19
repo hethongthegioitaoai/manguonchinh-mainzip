@@ -44,7 +44,7 @@ async function getWorldName(slug: string): Promise<string> {
 /* ─────────────────────────────────────────────────────
    GET /api/diplomacy/world/:worldSlug — quan hệ của thế giới này
 ───────────────────────────────────────────────────── */
-router.get("/api/diplomacy/world/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/diplomacy/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const relations = await db.select().from(worldRelations).where(
@@ -63,7 +63,7 @@ router.get("/api/diplomacy/world/:worldSlug", isAuthenticated, async (req, res) 
 /* ─────────────────────────────────────────────────────
    GET /api/diplomacy/map — bản đồ quan hệ toàn bộ (nodes + edges)
 ───────────────────────────────────────────────────── */
-router.get("/api/diplomacy/map", isAuthenticated, async (_req, res) => {
+router.get("/diplomacy/map", isAuthenticated, async (_req, res) => {
   try {
     const allRelations = await db.select().from(worldRelations);
     const builtinWorlds = [
@@ -85,7 +85,7 @@ router.get("/api/diplomacy/map", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/diplomacy/my-worlds — thế giới user sở hữu
 ───────────────────────────────────────────────────── */
-router.get("/api/diplomacy/my-worlds", isAuthenticated, async (req, res) => {
+router.get("/diplomacy/my-worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const result = await db.execute(
@@ -98,7 +98,7 @@ router.get("/api/diplomacy/my-worlds", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/diplomacy/propose — đề xuất hiệp ước
 ───────────────────────────────────────────────────── */
-router.post("/api/diplomacy/propose", isAuthenticated, async (req, res) => {
+router.post("/diplomacy/propose", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { fromWorldSlug, toWorldSlug, treatyType, message } = z.object({
@@ -153,7 +153,7 @@ router.post("/api/diplomacy/propose", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/diplomacy/respond/:eventId — chấp nhận / từ chối
 ───────────────────────────────────────────────────── */
-router.post("/api/diplomacy/respond/:eventId", isAuthenticated, async (req, res) => {
+router.post("/diplomacy/respond/:eventId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { eventId } = req.params as Record<string, string>;
@@ -214,7 +214,7 @@ router.post("/api/diplomacy/respond/:eventId", isAuthenticated, async (req, res)
 /* ─────────────────────────────────────────────────────
    POST /api/diplomacy/establish-embassy — lập đại sứ quán
 ───────────────────────────────────────────────────── */
-router.post("/api/diplomacy/establish-embassy", isAuthenticated, async (req, res) => {
+router.post("/diplomacy/establish-embassy", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { homeWorldSlug, hostWorldSlug, ambassadorCharId } = z.object({
@@ -276,7 +276,7 @@ router.post("/api/diplomacy/establish-embassy", isAuthenticated, async (req, res
 /* ─────────────────────────────────────────────────────
    POST /api/diplomacy/sanction/:targetWorldSlug — cấm vận
 ───────────────────────────────────────────────────── */
-router.post("/api/diplomacy/sanction/:targetWorldSlug", isAuthenticated, async (req, res) => {
+router.post("/diplomacy/sanction/:targetWorldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { targetWorldSlug } = req.params as Record<string, string>;
@@ -317,7 +317,7 @@ router.post("/api/diplomacy/sanction/:targetWorldSlug", isAuthenticated, async (
 /* ─────────────────────────────────────────────────────
    POST /api/diplomacy/peace/:targetWorldSlug — ký hòa ước
 ───────────────────────────────────────────────────── */
-router.post("/api/diplomacy/peace/:targetWorldSlug", isAuthenticated, async (req, res) => {
+router.post("/diplomacy/peace/:targetWorldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { targetWorldSlug } = req.params as Record<string, string>;

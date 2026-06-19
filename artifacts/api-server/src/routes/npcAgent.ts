@@ -540,7 +540,7 @@ function shouldTriggerAgent(ctx: AgentContext): boolean {
    ROUTE: POST /api/npc-agent/decide/:npcId
    Main agent decision endpoint
 ════════════════════════════════════════ */
-router.post("/api/npc-agent/decide/:npcId", isAuthenticated, async (req, res) => {
+router.post("/npc-agent/decide/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const { trigger = "manual", force = false } = req.body;
@@ -605,7 +605,7 @@ router.post("/api/npc-agent/decide/:npcId", isAuthenticated, async (req, res) =>
    ROUTE: GET /api/npc-agent/logs/:npcId
    Lấy lịch sử suy luận của NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-agent/logs/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-agent/logs/:npcId", isAuthenticated, async (req, res) => {
   try {
     const logs = await db.select().from(npcAgentLogs)
       .where(eq(npcAgentLogs.npcId, req.params.npcId as string))
@@ -621,7 +621,7 @@ router.get("/api/npc-agent/logs/:npcId", isAuthenticated, async (req, res) => {
    ROUTE: GET /api/npc-agent/dashboard/:worldSlug
    Dashboard — tất cả suy luận gần đây trong thế giới
 ════════════════════════════════════════ */
-router.get("/api/npc-agent/dashboard/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-agent/dashboard/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const logs = await db.select({
       id: npcAgentLogs.id,
@@ -653,7 +653,7 @@ router.get("/api/npc-agent/dashboard/:worldSlug", isAuthenticated, async (req, r
    ROUTE: POST /api/npc-agent/scan/:worldSlug
    Quét toàn bộ NPC trong world và trigger những NPC đang khủng hoảng
 ════════════════════════════════════════ */
-router.post("/api/npc-agent/scan/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-agent/scan/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id, name: npcCores.name })
@@ -697,7 +697,7 @@ router.post("/api/npc-agent/scan/:worldSlug", isAuthenticated, async (req, res) 
    ROUTE: GET /api/npc-agent/context/:npcId
    Preview context trước khi quyết định
 ════════════════════════════════════════ */
-router.get("/api/npc-agent/context/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-agent/context/:npcId", isAuthenticated, async (req, res) => {
   try {
     const ctx = await buildAgentContext(req.params.npcId as string, "manual");
     if (!ctx) return res.status(404).json({ message: "Không tìm thấy NPC" });

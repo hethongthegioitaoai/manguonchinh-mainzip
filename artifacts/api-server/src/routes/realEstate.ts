@@ -59,7 +59,7 @@ function calcIncome(plot: any): number {
 /* ─────────────────────────────────────────────────────
    GET /api/realestate/:worldSlug — tất cả plots
 ───────────────────────────────────────────────────── */
-router.get("/api/realestate/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/realestate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     await seedPlotsForWorld(worldSlug);
@@ -71,7 +71,7 @@ router.get("/api/realestate/:worldSlug", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/realestate/my-plots — plots của nhân vật hiện tại
 ───────────────────────────────────────────────────── */
-router.get("/api/realestate/my-plots", isAuthenticated, async (req, res) => {
+router.get("/realestate/my-plots", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -85,7 +85,7 @@ router.get("/api/realestate/my-plots", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/realestate/buy/:plotId — mua đất
 ───────────────────────────────────────────────────── */
-router.post("/api/realestate/buy/:plotId", isAuthenticated, async (req, res) => {
+router.post("/realestate/buy/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { plotId } = req.params as Record<string, string>;
@@ -123,7 +123,7 @@ router.post("/api/realestate/buy/:plotId", isAuthenticated, async (req, res) => 
 /* ─────────────────────────────────────────────────────
    POST /api/realestate/sell/:plotId — rao bán đất
 ───────────────────────────────────────────────────── */
-router.post("/api/realestate/sell/:plotId", isAuthenticated, async (req, res) => {
+router.post("/realestate/sell/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { plotId } = req.params as Record<string, string>;
@@ -140,7 +140,7 @@ router.post("/api/realestate/sell/:plotId", isAuthenticated, async (req, res) =>
 /* ─────────────────────────────────────────────────────
    POST /api/realestate/upgrade/:plotId — nâng cấp
 ───────────────────────────────────────────────────── */
-router.post("/api/realestate/upgrade/:plotId", isAuthenticated, async (req, res) => {
+router.post("/realestate/upgrade/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { plotId } = req.params as Record<string, string>;
@@ -166,7 +166,7 @@ router.post("/api/realestate/upgrade/:plotId", isAuthenticated, async (req, res)
 /* ─────────────────────────────────────────────────────
    POST /api/realestate/collect/:plotId — thu nhập 1 plot
 ───────────────────────────────────────────────────── */
-router.post("/api/realestate/collect/:plotId", isAuthenticated, async (req, res) => {
+router.post("/realestate/collect/:plotId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { plotId } = req.params as Record<string, string>;
@@ -192,7 +192,7 @@ router.post("/api/realestate/collect/:plotId", isAuthenticated, async (req, res)
 /* ─────────────────────────────────────────────────────
    POST /api/realestate/collect-all — thu tất cả
 ───────────────────────────────────────────────────── */
-router.post("/api/realestate/collect-all", isAuthenticated, async (req, res) => {
+router.post("/realestate/collect-all", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));

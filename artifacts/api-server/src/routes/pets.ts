@@ -89,7 +89,7 @@ function getGold(stats: unknown): number { return ((stats as any)?.gold ?? 0) as
 /* ─── API ROUTES ─── */
 
 // GET /api/pets/my-chars — nhân vật + info
-router.get("/api/pets/my-chars", isAuthenticated, async (req, res) => {
+router.get("/pets/my-chars", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const chars  = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -98,7 +98,7 @@ router.get("/api/pets/my-chars", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/pets/my/:characterId — danh sách pet của nhân vật
-router.get("/api/pets/my/:characterId", isAuthenticated, async (req, res) => {
+router.get("/pets/my/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = req.params as Record<string, string>;
@@ -111,7 +111,7 @@ router.get("/api/pets/my/:characterId", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/pets/summon — triệu hồi pet ngẫu nhiên
-router.post("/api/pets/summon", isAuthenticated, async (req, res) => {
+router.post("/pets/summon", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId } = z.object({ characterId: z.string().uuid() }).parse(req.body);
@@ -161,7 +161,7 @@ router.post("/api/pets/summon", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/pets/:id/equip — kích hoạt pet (deactivate others)
-router.post("/api/pets/:id/equip", isAuthenticated, async (req, res) => {
+router.post("/pets/:id/equip", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const petId  = req.params.id as string;
@@ -182,7 +182,7 @@ router.post("/api/pets/:id/equip", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/pets/:id/unequip — tắt pet active
-router.post("/api/pets/:id/unequip", isAuthenticated, async (req, res) => {
+router.post("/pets/:id/unequip", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const petId  = req.params.id as string;
@@ -197,7 +197,7 @@ router.post("/api/pets/:id/unequip", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/pets/:id/feed — cho pet ăn tăng bond level
-router.post("/api/pets/:id/feed", isAuthenticated, async (req, res) => {
+router.post("/pets/:id/feed", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const petId  = req.params.id as string;
@@ -254,7 +254,7 @@ router.post("/api/pets/:id/feed", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/pets/info — pet definitions + summon info
-router.get("/api/pets/info", isAuthenticated, async (_req, res) => {
+router.get("/pets/info", isAuthenticated, async (_req, res) => {
   res.json({ defs: PET_DEFS, summonCost: SUMMON_COST, cooldownHours: SUMMON_COOLDOWN_H, rarityPool: RARITY_POOL });
 });
 

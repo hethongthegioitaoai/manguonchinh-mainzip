@@ -46,7 +46,7 @@ async function generateEpicStory(char: any, worldName: string, reasons: string[]
 /* ─────────────────────────────────────────────────────
    GET /api/legends — điện truyền thuyết
 ───────────────────────────────────────────────────── */
-router.get("/api/legends", isAuthenticated, async (req, res) => {
+router.get("/legends", isAuthenticated, async (req, res) => {
   try {
     const list = await db.select().from(legends).orderBy(desc(legends.votes), desc(legends.inducedAt)).limit(50);
     res.json(list);
@@ -56,7 +56,7 @@ router.get("/api/legends", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/legends/check/:characterId — kiểm tra điều kiện
 ───────────────────────────────────────────────────── */
-router.get("/api/legends/check", isAuthenticated, async (req, res) => {
+router.get("/legends/check", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -74,7 +74,7 @@ router.get("/api/legends/check", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/legends/induct — tự phong huyền thoại
 ───────────────────────────────────────────────────── */
-router.post("/api/legends/induct", isAuthenticated, async (req, res) => {
+router.post("/legends/induct", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -110,7 +110,7 @@ router.post("/api/legends/induct", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/legends/vote/:legendId — bình chọn anh hùng
 ───────────────────────────────────────────────────── */
-router.post("/api/legends/vote/:legendId", isAuthenticated, async (req, res) => {
+router.post("/legends/vote/:legendId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { legendId } = req.params as Record<string, string>;
@@ -128,7 +128,7 @@ router.post("/api/legends/vote/:legendId", isAuthenticated, async (req, res) => 
 /* ─────────────────────────────────────────────────────
    GET /api/legends/:legendId — chi tiết 1 legend
 ───────────────────────────────────────────────────── */
-router.get("/api/legends/:legendId", isAuthenticated, async (req, res) => {
+router.get("/legends/:legendId", isAuthenticated, async (req, res) => {
   try {
     const { legendId } = req.params as Record<string, string>;
     const userId = (req as any).userId;

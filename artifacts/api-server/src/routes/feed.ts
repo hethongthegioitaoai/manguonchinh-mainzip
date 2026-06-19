@@ -7,7 +7,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 const router = Router();
 
 // GET /api/feed — lấy tất cả posts (toàn server), phân trang
-router.get("/api/feed", isAuthenticated, async (req, res) => {
+router.get("/feed", isAuthenticated, async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 30, 100);
     const offset = Number(req.query.offset) || 0;
@@ -42,7 +42,7 @@ router.get("/api/feed", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/feed — đăng bài thủ công
-router.post("/api/feed", isAuthenticated, async (req, res) => {
+router.post("/feed", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId, content } = req.body;
@@ -71,7 +71,7 @@ router.post("/api/feed", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/feed/auto — tự động đăng từ sự kiện game (internal)
-router.post("/api/feed/auto", isAuthenticated, async (req, res) => {
+router.post("/feed/auto", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { characterId, postType, content, metadata } = req.body;
@@ -100,7 +100,7 @@ router.post("/api/feed/auto", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/feed/:postId/like — thích / bỏ thích
-router.post("/api/feed/:postId/like", isAuthenticated, async (req, res) => {
+router.post("/feed/:postId/like", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { postId } = req.params as Record<string, string>;
@@ -125,7 +125,7 @@ router.post("/api/feed/:postId/like", isAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/feed/:postId — xoá bài của mình
-router.delete("/api/feed/:postId", isAuthenticated, async (req, res) => {
+router.delete("/feed/:postId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { postId } = req.params as Record<string, string>;

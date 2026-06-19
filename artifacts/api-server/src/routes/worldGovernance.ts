@@ -50,7 +50,7 @@ async function settleExpiredVotes() {
 /* ─────────────────────────────────────────────────────
    GET /api/governance/:worldSlug — full governance info
 ───────────────────────────────────────────────────── */
-router.get("/api/governance/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/governance/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     await settleExpiredVotes();
     const { worldSlug } = req.params as Record<string, string>;
@@ -67,7 +67,7 @@ router.get("/api/governance/:worldSlug", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/governance/:worldSlug/history — lịch sử sắc lệnh + votes
 ───────────────────────────────────────────────────── */
-router.get("/api/governance/:worldSlug/history", isAuthenticated, async (req, res) => {
+router.get("/governance/:worldSlug/history", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const [pastVotes, pastDecrees] = await Promise.all([
@@ -83,7 +83,7 @@ router.get("/api/governance/:worldSlug/history", isAuthenticated, async (req, re
 /* ─────────────────────────────────────────────────────
    POST /api/governance/appoint/:worldSlug — bổ nhiệm hội đồng
 ───────────────────────────────────────────────────── */
-router.post("/api/governance/appoint/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/governance/appoint/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -125,7 +125,7 @@ router.post("/api/governance/appoint/:worldSlug", isAuthenticated, async (req, r
 /* ─────────────────────────────────────────────────────
    POST /api/governance/propose/:worldSlug — đề xuất luật/nghị quyết
 ───────────────────────────────────────────────────── */
-router.post("/api/governance/propose/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/governance/propose/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -174,7 +174,7 @@ router.post("/api/governance/propose/:worldSlug", isAuthenticated, async (req, r
 /* ─────────────────────────────────────────────────────
    POST /api/governance/vote/:voteId — bỏ phiếu
 ───────────────────────────────────────────────────── */
-router.post("/api/governance/vote/:voteId", isAuthenticated, async (req, res) => {
+router.post("/governance/vote/:voteId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { voteId } = req.params as Record<string, string>;
@@ -208,7 +208,7 @@ router.post("/api/governance/vote/:voteId", isAuthenticated, async (req, res) =>
 /* ─────────────────────────────────────────────────────
    POST /api/governance/decree/:worldSlug — owner ban hành sắc lệnh
 ───────────────────────────────────────────────────── */
-router.post("/api/governance/decree/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/governance/decree/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -266,7 +266,7 @@ router.post("/api/governance/decree/:worldSlug", isAuthenticated, async (req, re
 /* ─────────────────────────────────────────────────────
    PATCH /api/governance/constitution/:worldSlug — cập nhật chính sách
 ───────────────────────────────────────────────────── */
-router.patch("/api/governance/constitution/:worldSlug", isAuthenticated, async (req, res) => {
+router.patch("/governance/constitution/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;

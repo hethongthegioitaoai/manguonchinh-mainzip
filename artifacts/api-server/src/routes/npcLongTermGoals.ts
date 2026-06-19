@@ -107,7 +107,7 @@ function goalMemory(goalType: string, npc: typeof npcCores.$inferSelect, progres
 /* ════════════════════════════════════════
    GET goals for a single NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-goals/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-goals/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const goals = await db.select().from(npcLongTermGoals)
@@ -120,7 +120,7 @@ router.get("/api/npc-goals/:npcId", isAuthenticated, async (req, res) => {
 /* ════════════════════════════════════════
    GET goals for all NPCs in a world
 ════════════════════════════════════════ */
-router.get("/api/npc-goals/world/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-goals/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(eq(npcCores.worldSlug, worldSlug));
@@ -137,7 +137,7 @@ router.get("/api/npc-goals/world/:worldSlug", isAuthenticated, async (req, res) 
 /* ════════════════════════════════════════
    POST auto-generate goals for all NPCs in a world
 ════════════════════════════════════════ */
-router.post("/api/npc-goals/auto-generate/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-goals/auto-generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
@@ -180,7 +180,7 @@ router.post("/api/npc-goals/auto-generate/:worldSlug", isAuthenticated, async (r
 /* ════════════════════════════════════════
    POST tick — advance all active goals in a world
 ════════════════════════════════════════ */
-router.post("/api/npc-goals/tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-goals/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
@@ -255,7 +255,7 @@ router.post("/api/npc-goals/tick/:worldSlug", isAuthenticated, async (req, res) 
 /* ════════════════════════════════════════
    GET summary stats for a world
 ════════════════════════════════════════ */
-router.get("/api/npc-goals/summary/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-goals/summary/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug));

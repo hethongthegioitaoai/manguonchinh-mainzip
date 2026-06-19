@@ -57,7 +57,7 @@ async function applyInterest(account: typeof bankAccounts.$inferSelect) {
 /* ─────────────────────────────────────────────────────
    GET /api/bank/account — tài khoản + lãi suất auto-apply
 ───────────────────────────────────────────────────── */
-router.get("/api/bank/account", isAuthenticated, async (req, res) => {
+router.get("/bank/account", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -80,7 +80,7 @@ router.get("/api/bank/account", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/bank/rates — tỷ giá hối đoái
 ───────────────────────────────────────────────────── */
-router.get("/api/bank/rates", isAuthenticated, async (_req, res) => {
+router.get("/bank/rates", isAuthenticated, async (_req, res) => {
   try {
     const worlds = [
       { slug: "tu-tien",   currency: "Linh Thạch", symbol: "◈" },
@@ -117,7 +117,7 @@ router.get("/api/bank/rates", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bank/deposit — gửi tiết kiệm
 ───────────────────────────────────────────────────── */
-router.post("/api/bank/deposit", isAuthenticated, async (req, res) => {
+router.post("/bank/deposit", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { amount } = z.object({ amount: z.number().int().min(1) }).parse(req.body);
@@ -142,7 +142,7 @@ router.post("/api/bank/deposit", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bank/withdraw — rút tiền
 ───────────────────────────────────────────────────── */
-router.post("/api/bank/withdraw", isAuthenticated, async (req, res) => {
+router.post("/bank/withdraw", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { amount } = z.object({ amount: z.number().int().min(1) }).parse(req.body);
@@ -167,7 +167,7 @@ router.post("/api/bank/withdraw", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bank/loan — vay vốn
 ───────────────────────────────────────────────────── */
-router.post("/api/bank/loan", isAuthenticated, async (req, res) => {
+router.post("/bank/loan", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { amount } = z.object({ amount: z.number().int().min(100) }).parse(req.body);
@@ -202,7 +202,7 @@ router.post("/api/bank/loan", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bank/repay/:loanId — trả nợ
 ───────────────────────────────────────────────────── */
-router.post("/api/bank/repay/:loanId", isAuthenticated, async (req, res) => {
+router.post("/bank/repay/:loanId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { loanId } = req.params as Record<string, string>;
@@ -228,7 +228,7 @@ router.post("/api/bank/repay/:loanId", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/bank/transfer — chuyển khoản cross-world
 ───────────────────────────────────────────────────── */
-router.post("/api/bank/transfer", isAuthenticated, async (req, res) => {
+router.post("/bank/transfer", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { toCharId, amount, note } = z.object({

@@ -209,7 +209,7 @@ const FESTIVAL_DATA: Record<string, Record<string, {
 };
 
 /* GET /api/festivals/:worldSlug */
-router.get("/api/festivals/:worldSlug", async (req, res) => {
+router.get("/festivals/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const festivals = await db.select().from(seasonalFestivals)
@@ -231,7 +231,7 @@ router.get("/api/festivals/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/festivals/create/:worldSlug — create festival for current season */
-router.post("/api/festivals/create/:worldSlug", async (req, res) => {
+router.post("/festivals/create/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const { seasonOverride } = req.body as { seasonOverride?: string };
@@ -272,7 +272,7 @@ router.post("/api/festivals/create/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/festivals/join/:festivalId */
-router.post("/api/festivals/join/:festivalId", async (req, res) => {
+router.post("/festivals/join/:festivalId", async (req, res) => {
   try {
     const { festivalId } = req.params;
     const { characterId, characterName } = req.body as { characterId: string; characterName?: string };
@@ -303,7 +303,7 @@ router.post("/api/festivals/join/:festivalId", async (req, res) => {
 });
 
 /* POST /api/festivals/complete-task/:festivalId */
-router.post("/api/festivals/complete-task/:festivalId", async (req, res) => {
+router.post("/festivals/complete-task/:festivalId", async (req, res) => {
   try {
     const { festivalId } = req.params;
     const { characterId, taskIndex } = req.body as { characterId: string; taskIndex: number };
@@ -337,7 +337,7 @@ router.post("/api/festivals/complete-task/:festivalId", async (req, res) => {
 });
 
 /* POST /api/festivals/end/:festivalId */
-router.post("/api/festivals/end/:festivalId", async (req, res) => {
+router.post("/festivals/end/:festivalId", async (req, res) => {
   try {
     const { festivalId } = req.params;
     const [festival] = await db.select().from(seasonalFestivals)

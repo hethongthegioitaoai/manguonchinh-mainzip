@@ -9,7 +9,7 @@ const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 // GET /api/god/my-worlds — danh sách thế giới user đã tạo
-router.get("/api/god/my-worlds", isAuthenticated, async (req, res) => {
+router.get("/god/my-worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const worlds = await db.select().from(customWorlds)
@@ -23,7 +23,7 @@ router.get("/api/god/my-worlds", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/god/world/:worldSlug — thông tin thế giới + NPC + prayers
-router.get("/api/god/world/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/god/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -48,7 +48,7 @@ router.get("/api/god/world/:worldSlug", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/god/prayers/generate/:worldSlug — AI sinh prayer cho NPC (trigger thủ công)
-router.post("/api/god/prayers/generate/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/god/prayers/generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -99,7 +99,7 @@ Chỉ trả về lời cầu nguyện, không giải thích.`;
 });
 
 // POST /api/god/intervene/:worldSlug — Thần can thiệp vào thế giới
-router.post("/api/god/intervene/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/god/intervene/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -154,7 +154,7 @@ Hãy diễn giải lệnh này thành một SỰ KIỆN THẦN THÁNH xảy ra t
 });
 
 // POST /api/god/bless/:npcId — ban phước NPC
-router.post("/api/god/bless/:npcId", isAuthenticated, async (req, res) => {
+router.post("/god/bless/:npcId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { npcId } = req.params as Record<string, string>;
@@ -194,7 +194,7 @@ router.post("/api/god/bless/:npcId", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/god/smite/:npcId — trừng phạt NPC
-router.post("/api/god/smite/:npcId", isAuthenticated, async (req, res) => {
+router.post("/god/smite/:npcId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { npcId } = req.params as Record<string, string>;
@@ -246,7 +246,7 @@ router.post("/api/god/smite/:npcId", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/god/answer-prayer/:prayerId — Thần trả lời lời cầu nguyện
-router.post("/api/god/answer-prayer/:prayerId", isAuthenticated, async (req, res) => {
+router.post("/god/answer-prayer/:prayerId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { prayerId } = req.params as Record<string, string>;
@@ -289,7 +289,7 @@ router.post("/api/god/answer-prayer/:prayerId", isAuthenticated, async (req, res
 });
 
 // GET /api/god/observe/:worldSlug — full live snapshot của thế giới
-router.get("/api/god/observe/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/god/observe/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -366,7 +366,7 @@ router.get("/api/god/observe/:worldSlug", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/god/population-history/:worldSlug — biểu đồ 24 điểm gần nhất
-router.get("/api/god/population-history/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/god/population-history/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -387,7 +387,7 @@ router.get("/api/god/population-history/:worldSlug", isAuthenticated, async (req
 });
 
 // POST /api/god/macro-intervene/:worldSlug — Thần can thiệp vĩ mô
-router.post("/api/god/macro-intervene/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/god/macro-intervene/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -457,7 +457,7 @@ Chỉ trả về mô tả sự kiện, không giải thích.`;
 });
 
 // GET /api/god/auto-events/:worldSlug — sự kiện tự phát sinh
-router.get("/api/god/auto-events/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/god/auto-events/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;

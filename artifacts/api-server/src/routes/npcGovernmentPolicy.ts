@@ -55,7 +55,7 @@ const DEFAULT_POLICIES = [
    POST /api/npc-policy/seed
    Seed default policies if not exist
 ════════════════════════════════════════ */
-router.post("/api/npc-policy/seed", isAuthenticated, async (_req, res) => {
+router.post("/npc-policy/seed", isAuthenticated, async (_req, res) => {
   try {
     const existing = await db.select({ name: governmentPolicies.name }).from(governmentPolicies);
     const existingNames = new Set(existing.map(p => p.name));
@@ -75,7 +75,7 @@ router.post("/api/npc-policy/seed", isAuthenticated, async (_req, res) => {
    GET /api/npc-policy/catalog
    All available policy templates
 ════════════════════════════════════════ */
-router.get("/api/npc-policy/catalog", isAuthenticated, async (_req, res) => {
+router.get("/npc-policy/catalog", isAuthenticated, async (_req, res) => {
   try {
     const policies = await db.select().from(governmentPolicies).orderBy(governmentPolicies.category);
     return res.json({ policies });
@@ -89,7 +89,7 @@ router.get("/api/npc-policy/catalog", isAuthenticated, async (_req, res) => {
    GET /api/npc-policy/active/:govId
    Active policies for a government + history
 ════════════════════════════════════════ */
-router.get("/api/npc-policy/active/:govId", isAuthenticated, async (req, res) => {
+router.get("/npc-policy/active/:govId", isAuthenticated, async (req, res) => {
   try {
     const { govId } = req.params as Record<string, string>;
 
@@ -121,7 +121,7 @@ router.get("/api/npc-policy/active/:govId", isAuthenticated, async (req, res) =>
 /* ════════════════════════════════════════
    POST /api/npc-policy/activate/:govId/:policyId
 ════════════════════════════════════════ */
-router.post("/api/npc-policy/activate/:govId/:policyId", isAuthenticated, async (req, res) => {
+router.post("/npc-policy/activate/:govId/:policyId", isAuthenticated, async (req, res) => {
   try {
     const { govId, policyId } = req.params as Record<string, string>;
 
@@ -165,7 +165,7 @@ router.post("/api/npc-policy/activate/:govId/:policyId", isAuthenticated, async 
 /* ════════════════════════════════════════
    DELETE /api/npc-policy/deactivate/:govId/:policyId
 ════════════════════════════════════════ */
-router.delete("/api/npc-policy/deactivate/:govId/:policyId", isAuthenticated, async (req, res) => {
+router.delete("/npc-policy/deactivate/:govId/:policyId", isAuthenticated, async (req, res) => {
   try {
     const { govId, policyId } = req.params as Record<string, string>;
 
@@ -209,7 +209,7 @@ router.delete("/api/npc-policy/deactivate/:govId/:policyId", isAuthenticated, as
    AI leader automatically activates/deactivates
    policies based on territory conditions
 ════════════════════════════════════════ */
-router.post("/api/npc-policy/auto-decide/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-policy/auto-decide/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -299,7 +299,7 @@ router.post("/api/npc-policy/auto-decide/:worldSlug", isAuthenticated, async (re
    Apply active policy effects to governments
    Called by world tick
 ════════════════════════════════════════ */
-router.post("/api/npc-policy/apply-tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-policy/apply-tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     await applyGovernmentPolicies(worldSlug);

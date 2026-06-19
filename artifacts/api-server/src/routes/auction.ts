@@ -66,7 +66,7 @@ async function settleExpiredAuctions() {
 }
 
 // GET /api/auction/list — danh sách đấu giá active (auto-settle expired)
-router.get("/api/auction/list", isAuthenticated, async (req, res) => {
+router.get("/auction/list", isAuthenticated, async (req, res) => {
   try {
     await settleExpiredAuctions();
     const { worldSlug } = req.query as Record<string, string>;
@@ -89,7 +89,7 @@ router.get("/api/auction/list", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/auction/my — listings + bids của tôi
-router.get("/api/auction/my", isAuthenticated, async (req, res) => {
+router.get("/auction/my", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const myChars = await db.select({ id: characters.id }).from(characters).where(eq(characters.userId, userId));
@@ -118,7 +118,7 @@ router.get("/api/auction/my", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/auction/my-chars — nhân vật + inventory
-router.get("/api/auction/my-chars", isAuthenticated, async (req, res) => {
+router.get("/auction/my-chars", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const chars = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -146,7 +146,7 @@ const listSchema = z.object({
 });
 
 // POST /api/auction/list-item — đăng item lên đấu giá
-router.post("/api/auction/list-item", isAuthenticated, async (req, res) => {
+router.post("/auction/list-item", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const body = listSchema.safeParse(req.body);
@@ -200,7 +200,7 @@ router.post("/api/auction/list-item", isAuthenticated, async (req, res) => {
 const bidSchema = z.object({ charId: z.string().uuid(), amount: z.number().int().min(1) });
 
 // POST /api/auction/:id/bid — đặt giá
-router.post("/api/auction/:id/bid", isAuthenticated, async (req, res) => {
+router.post("/auction/:id/bid", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const auctionId = req.params.id as string;
@@ -249,7 +249,7 @@ router.post("/api/auction/:id/bid", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/auction/:id/buyout — mua ngay
-router.post("/api/auction/:id/buyout", isAuthenticated, async (req, res) => {
+router.post("/auction/:id/buyout", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const auctionId = req.params.id as string;
@@ -302,7 +302,7 @@ router.post("/api/auction/:id/buyout", isAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/auction/:id/cancel — huỷ đấu giá (chỉ seller, chưa có bid)
-router.delete("/api/auction/:id/cancel", isAuthenticated, async (req, res) => {
+router.delete("/auction/:id/cancel", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const auctionId = req.params.id as string;

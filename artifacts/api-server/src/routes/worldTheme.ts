@@ -119,14 +119,14 @@ async function generateThemeFramework(themeInput: string, presetId?: string) {
 /* ─────────────────────────────────────────────────────
    GET /api/world-theme/presets — 15 preset có sẵn
 ───────────────────────────────────────────────────── */
-router.get("/api/world-theme/presets", isAuthenticated, async (_req, res) => {
+router.get("/world-theme/presets", isAuthenticated, async (_req, res) => {
   res.json(PRESETS);
 });
 
 /* ─────────────────────────────────────────────────────
    GET /api/world-theme/:worldSlug — theme hiện tại của thế giới
 ───────────────────────────────────────────────────── */
-router.get("/api/world-theme/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/world-theme/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const [theme] = await db.select().from(worldThemes).where(eq(worldThemes.worldSlug, worldSlug));
@@ -137,7 +137,7 @@ router.get("/api/world-theme/:worldSlug", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/world-theme/generate — AI sinh full framework
 ───────────────────────────────────────────────────── */
-router.post("/api/world-theme/generate", isAuthenticated, async (req, res) => {
+router.post("/world-theme/generate", isAuthenticated, async (req, res) => {
   try {
     const { themeInput, presetId } = z.object({
       themeInput: z.string().min(1),
@@ -152,7 +152,7 @@ router.post("/api/world-theme/generate", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/world-theme/apply/:worldSlug — áp dụng theme vào thế giới
 ───────────────────────────────────────────────────── */
-router.post("/api/world-theme/apply/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/world-theme/apply/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;

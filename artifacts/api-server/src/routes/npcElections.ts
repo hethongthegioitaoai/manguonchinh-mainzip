@@ -32,7 +32,7 @@ function electionTypeForGovType(govType: string): string {
    GET /api/npc-elections/:worldSlug
    All elections (past + open) with candidates
 ════════════════════════════════════════ */
-router.get("/api/npc-elections/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-elections/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -93,7 +93,7 @@ router.get("/api/npc-elections/:worldSlug", isAuthenticated, async (req, res) =>
    that doesn't have an active one.
    Pick candidates from eligible NPCs.
 ════════════════════════════════════════ */
-router.post("/api/npc-elections/open/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-elections/open/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -205,7 +205,7 @@ router.post("/api/npc-elections/open/:worldSlug", isAuthenticated, async (req, r
      - candidate campaign score
      - incumbent penalty/bonus from approval
 ════════════════════════════════════════ */
-router.post("/api/npc-elections/vote/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-elections/vote/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -327,7 +327,7 @@ router.post("/api/npc-elections/vote/:worldSlug", isAuthenticated, async (req, r
    - update government leader
    - write memories
 ════════════════════════════════════════ */
-router.post("/api/npc-elections/resolve/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-elections/resolve/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -435,7 +435,7 @@ router.post("/api/npc-elections/resolve/:worldSlug", isAuthenticated, async (req
    Will only open new election if approval < 40
    OR there's no open election for this government.
 ════════════════════════════════════════ */
-router.post("/api/npc-elections/auto-election/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-elections/auto-election/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 

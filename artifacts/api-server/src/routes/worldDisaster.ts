@@ -50,7 +50,7 @@ async function settleExpiredDisasters() {
 /* ─────────────────────────────────────────────────────
    GET /api/disasters/:worldSlug — events đang active
 ───────────────────────────────────────────────────── */
-router.get("/api/disasters/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/disasters/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     await settleExpiredDisasters();
     const { worldSlug } = req.params as Record<string, string>;
@@ -64,7 +64,7 @@ router.get("/api/disasters/:worldSlug", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/disasters/all/active — tất cả events active toàn server
 ───────────────────────────────────────────────────── */
-router.get("/api/disasters/all/active", isAuthenticated, async (_req, res) => {
+router.get("/disasters/all/active", isAuthenticated, async (_req, res) => {
   try {
     await settleExpiredDisasters();
     const events = await db.select().from(worldDisasters)
@@ -77,7 +77,7 @@ router.get("/api/disasters/all/active", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/disasters/history/:worldSlug — lịch sử
 ───────────────────────────────────────────────────── */
-router.get("/api/disasters/history/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/disasters/history/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const events = await db.select().from(worldDisasters)
@@ -90,7 +90,7 @@ router.get("/api/disasters/history/:worldSlug", isAuthenticated, async (req, res
 /* ─────────────────────────────────────────────────────
    POST /api/disasters/trigger/:worldSlug — trigger event (AI random hoặc manual)
 ───────────────────────────────────────────────────── */
-router.post("/api/disasters/trigger/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/disasters/trigger/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const { templateId, forceType } = z.object({
@@ -137,7 +137,7 @@ router.post("/api/disasters/trigger/:worldSlug", isAuthenticated, async (req, re
 /* ─────────────────────────────────────────────────────
    POST /api/disasters/:disasterId/pray — cầu nguyện
 ───────────────────────────────────────────────────── */
-router.post("/api/disasters/:disasterId/pray", isAuthenticated, async (req, res) => {
+router.post("/disasters/:disasterId/pray", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { disasterId } = req.params as Record<string, string>;
@@ -216,7 +216,7 @@ router.post("/api/disasters/:disasterId/pray", isAuthenticated, async (req, res)
 /* ─────────────────────────────────────────────────────
    GET /api/disasters/effect/:worldSlug — hiệu ứng hiện tại của thế giới
 ───────────────────────────────────────────────────── */
-router.get("/api/disasters/effect/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/disasters/effect/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const active = await db.select().from(worldDisasters)

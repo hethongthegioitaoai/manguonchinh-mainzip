@@ -50,7 +50,7 @@ async function seedWorldSkills(worldSlug: string, worldName: string): Promise<vo
 /* ─────────────────────────────────────────────────────
    GET /api/world-skills/:worldSlug — kỹ năng của thế giới
 ───────────────────────────────────────────────────── */
-router.get("/api/world-skills/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/world-skills/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const userId = (req as any).userId;
@@ -73,7 +73,7 @@ router.get("/api/world-skills/:worldSlug", isAuthenticated, async (req, res) => 
 /* ─────────────────────────────────────────────────────
    POST /api/world-skills/learn — học kỹ năng
 ───────────────────────────────────────────────────── */
-router.post("/api/world-skills/learn", isAuthenticated, async (req, res) => {
+router.post("/world-skills/learn", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { skillId } = req.body;
@@ -115,7 +115,7 @@ router.post("/api/world-skills/learn", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/world-skills/my — tất cả kỹ năng đã học
 ───────────────────────────────────────────────────── */
-router.get("/api/world-skills/my", isAuthenticated, async (req, res) => {
+router.get("/world-skills/my", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const skills = await db.select().from(characterWorldSkills).where(eq(characterWorldSkills.userId, userId)).orderBy(desc(characterWorldSkills.learnedAt));

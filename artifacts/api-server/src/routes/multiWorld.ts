@@ -19,7 +19,7 @@ async function getOrCreateSlot(userId: string) {
 }
 
 // GET /api/multiworld/my-worlds
-router.get("/api/multiworld/my-worlds", isAuthenticated, async (req: any, res) => {
+router.get("/multiworld/my-worlds", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId as string;
     const slot = await getOrCreateSlot(userId);
@@ -58,7 +58,7 @@ router.get("/api/multiworld/my-worlds", isAuthenticated, async (req: any, res) =
 });
 
 // POST /api/multiworld/portal/create
-router.post("/api/multiworld/portal/create", isAuthenticated, async (req: any, res) => {
+router.post("/multiworld/portal/create", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId as string;
     const { fromWorldSlug, toWorldSlug, portalName, portalType, travelCost } = req.body;
@@ -91,7 +91,7 @@ router.post("/api/multiworld/portal/create", isAuthenticated, async (req: any, r
 });
 
 // POST /api/multiworld/portal/travel/:portalId
-router.post("/api/multiworld/portal/travel/:portalId", isAuthenticated, async (req: any, res) => {
+router.post("/multiworld/portal/travel/:portalId", isAuthenticated, async (req: any, res) => {
   try {
     const { portalId } = req.params;
     const { characterId } = req.body;
@@ -116,7 +116,7 @@ router.post("/api/multiworld/portal/travel/:portalId", isAuthenticated, async (r
 });
 
 // POST /api/multiworld/domain/create
-router.post("/api/multiworld/domain/create", isAuthenticated, async (req: any, res) => {
+router.post("/multiworld/domain/create", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId as string;
     const { domainName } = req.body;
@@ -142,7 +142,7 @@ router.post("/api/multiworld/domain/create", isAuthenticated, async (req: any, r
 });
 
 // GET /api/multiworld/domain/my
-router.get("/api/multiworld/domain/my", isAuthenticated, async (req: any, res) => {
+router.get("/multiworld/domain/my", isAuthenticated, async (req: any, res) => {
   try {
     const userId = req.userId as string;
     const [domain] = await db.select().from(starDomains).where(eq(starDomains.ownerUserId, userId));

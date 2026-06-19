@@ -59,7 +59,7 @@ function generateNarrative(fromWorld: string, toWorld: string, guards: number, c
 }
 
 /* GET /api/caravans/:worldSlug */
-router.get("/api/caravans/:worldSlug", async (req, res) => {
+router.get("/caravans/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const all = await db.select().from(caravans)
@@ -79,7 +79,7 @@ router.get("/api/caravans/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/caravans/dispatch/:worldSlug */
-router.post("/api/caravans/dispatch/:worldSlug", async (req, res) => {
+router.post("/caravans/dispatch/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const { fromWorld, toWorld, cargoIds, guards } = req.body as {
@@ -122,7 +122,7 @@ router.post("/api/caravans/dispatch/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/caravans/simulate/:worldSlug — move traveling → arrived or raided */
-router.post("/api/caravans/simulate/:worldSlug", async (req, res) => {
+router.post("/caravans/simulate/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const traveling = await db.select().from(caravans)
@@ -157,7 +157,7 @@ router.post("/api/caravans/simulate/:worldSlug", async (req, res) => {
 });
 
 /* POST /api/caravans/auto-dispatch/:worldSlug — auto spawn + simulate */
-router.post("/api/caravans/auto-dispatch/:worldSlug", async (req, res) => {
+router.post("/caravans/auto-dispatch/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const worldRoutes = ROUTES.slice(0, 6);

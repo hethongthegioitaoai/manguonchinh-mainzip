@@ -296,7 +296,7 @@ export async function evolveNpcPersonality(npcId: string): Promise<{
    POST /api/personality-evolution/tick/:worldSlug
    Tiến hóa toàn bộ NPC trong một thế giới (chạy mỗi 5 tick)
 ════════════════════════════════════════ */
-router.post("/api/personality-evolution/tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/personality-evolution/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores)
@@ -332,7 +332,7 @@ router.post("/api/personality-evolution/tick/:worldSlug", isAuthenticated, async
    POST /api/personality-evolution/evolve/:npcId
    Tiến hóa một NPC cụ thể
 ════════════════════════════════════════ */
-router.post("/api/personality-evolution/evolve/:npcId", isAuthenticated, async (req, res) => {
+router.post("/personality-evolution/evolve/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const result = await evolveNpcPersonality(npcId);
@@ -347,7 +347,7 @@ router.post("/api/personality-evolution/evolve/:npcId", isAuthenticated, async (
    GET /api/personality-evolution/:npcId
    Lấy lịch sử tính cách + nhật ký của một NPC
 ════════════════════════════════════════ */
-router.get("/api/personality-evolution/:npcId", isAuthenticated, async (req, res) => {
+router.get("/personality-evolution/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
 
@@ -378,7 +378,7 @@ router.get("/api/personality-evolution/:npcId", isAuthenticated, async (req, res
    GET /api/personality-evolution/dashboard/:worldSlug
    Dashboard tổng quan tất cả NPC trong thế giới
 ════════════════════════════════════════ */
-router.get("/api/personality-evolution/dashboard/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/personality-evolution/dashboard/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 

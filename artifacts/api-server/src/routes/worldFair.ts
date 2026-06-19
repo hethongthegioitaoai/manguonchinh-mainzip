@@ -101,7 +101,7 @@ async function settleFair(fairId: string) {
 /* ─────────────────────────────────────────────────────
    GET /api/fair/current — hội chợ đang diễn ra + gian hàng
 ───────────────────────────────────────────────────── */
-router.get("/api/fair/current", isAuthenticated, async (req, res) => {
+router.get("/fair/current", isAuthenticated, async (req, res) => {
   try {
     const fair = await getOrCreateActiveFair();
     const booths = await db.select().from(fairBooths).where(eq(fairBooths.fairId, fair.id)).orderBy(desc(fairBooths.votes));
@@ -114,7 +114,7 @@ router.get("/api/fair/current", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/fair/history — hội chợ đã kết thúc
 ───────────────────────────────────────────────────── */
-router.get("/api/fair/history", isAuthenticated, async (req, res) => {
+router.get("/fair/history", isAuthenticated, async (req, res) => {
   try {
     const history = await db.select().from(worldFairs).where(eq(worldFairs.status, "ended")).orderBy(desc(worldFairs.createdAt)).limit(10);
     res.json(history);
@@ -126,7 +126,7 @@ router.get("/api/fair/history", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/fair/visit/:boothId — tham quan gian hàng
 ───────────────────────────────────────────────────── */
-router.post("/api/fair/visit/:boothId", isAuthenticated, async (req, res) => {
+router.post("/fair/visit/:boothId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { boothId } = req.params as Record<string, string>;
@@ -178,7 +178,7 @@ router.post("/api/fair/visit/:boothId", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/fair/vote/:boothId — bình chọn gian hàng
 ───────────────────────────────────────────────────── */
-router.post("/api/fair/vote/:boothId", isAuthenticated, async (req, res) => {
+router.post("/fair/vote/:boothId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { boothId } = req.params as Record<string, string>;
@@ -201,7 +201,7 @@ router.post("/api/fair/vote/:boothId", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/fair/register — đăng ký gian hàng (creator)
 ───────────────────────────────────────────────────── */
-router.post("/api/fair/register", isAuthenticated, async (req, res) => {
+router.post("/fair/register", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const fair = await getOrCreateActiveFair();
@@ -229,7 +229,7 @@ router.post("/api/fair/register", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/fair/my-visits — lịch sử tham quan của user
 ───────────────────────────────────────────────────── */
-router.get("/api/fair/my-visits", isAuthenticated, async (req, res) => {
+router.get("/fair/my-visits", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const visits = await db.select().from(fairVisits).where(eq(fairVisits.userId, userId)).orderBy(desc(fairVisits.visitedAt)).limit(20);

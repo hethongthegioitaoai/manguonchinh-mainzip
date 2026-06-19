@@ -10,7 +10,7 @@ const router = Router();
 /* ─────────────────────────────────────────────────────
    GET /api/citizenship/worlds — thế giới đang nhận công dân
 ───────────────────────────────────────────────────── */
-router.get("/api/citizenship/worlds", isAuthenticated, async (req, res) => {
+router.get("/citizenship/worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const worlds = await db.select().from(customWorlds)
@@ -31,7 +31,7 @@ router.get("/api/citizenship/worlds", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/citizenship/my — quốc tịch của user
 ───────────────────────────────────────────────────── */
-router.get("/api/citizenship/my", isAuthenticated, async (req, res) => {
+router.get("/citizenship/my", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const list = await db.select().from(citizenships)
@@ -44,7 +44,7 @@ router.get("/api/citizenship/my", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/citizenship/apply/:worldSlug — nộp đơn
 ───────────────────────────────────────────────────── */
-router.post("/api/citizenship/apply/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/citizenship/apply/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -86,7 +86,7 @@ router.post("/api/citizenship/apply/:worldSlug", isAuthenticated, async (req, re
 /* ─────────────────────────────────────────────────────
    GET /api/citizenship/applications/:worldSlug — creator xem đơn
 ───────────────────────────────────────────────────── */
-router.get("/api/citizenship/applications/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/citizenship/applications/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -103,7 +103,7 @@ router.get("/api/citizenship/applications/:worldSlug", isAuthenticated, async (r
 /* ─────────────────────────────────────────────────────
    POST /api/citizenship/approve/:id — phê duyệt
 ───────────────────────────────────────────────────── */
-router.post("/api/citizenship/approve/:id", isAuthenticated, async (req, res) => {
+router.post("/citizenship/approve/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params as Record<string, string>;
@@ -127,7 +127,7 @@ router.post("/api/citizenship/approve/:id", isAuthenticated, async (req, res) =>
 /* ─────────────────────────────────────────────────────
    POST /api/citizenship/revoke/:id — thu hồi quốc tịch
 ───────────────────────────────────────────────────── */
-router.post("/api/citizenship/revoke/:id", isAuthenticated, async (req, res) => {
+router.post("/citizenship/revoke/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params as Record<string, string>;
@@ -149,7 +149,7 @@ router.post("/api/citizenship/revoke/:id", isAuthenticated, async (req, res) => 
 /* ─────────────────────────────────────────────────────
    POST /api/citizenship/pay-tax/:worldSlug — nộp thuế thường niên
 ───────────────────────────────────────────────────── */
-router.post("/api/citizenship/pay-tax/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/citizenship/pay-tax/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -175,7 +175,7 @@ router.post("/api/citizenship/pay-tax/:worldSlug", isAuthenticated, async (req, 
 /* ─────────────────────────────────────────────────────
    POST /api/citizenship/benefits/:worldSlug — creator cài quyền lợi
 ───────────────────────────────────────────────────── */
-router.post("/api/citizenship/benefits/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/citizenship/benefits/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;

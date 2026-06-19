@@ -215,7 +215,7 @@ export function getEmotionBehavior(emotion: typeof npcEmotions.$inferSelect): {
 /* ════════════════════════════════════════
    GET emotions for a single NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-emotions/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-emotions/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const emotion = await ensureEmotion(npcId);
@@ -230,7 +230,7 @@ router.get("/api/npc-emotions/:npcId", isAuthenticated, async (req, res) => {
 /* ════════════════════════════════════════
    GET emotions for all NPCs in a world
 ════════════════════════════════════════ */
-router.get("/api/npc-emotions/world/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-emotions/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores)
@@ -253,7 +253,7 @@ router.get("/api/npc-emotions/world/:worldSlug", isAuthenticated, async (req, re
 /* ════════════════════════════════════════
    POST tick — update all emotions in a world
 ════════════════════════════════════════ */
-router.post("/api/npc-emotions/tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-emotions/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores)
@@ -331,7 +331,7 @@ router.post("/api/npc-emotions/tick/:worldSlug", isAuthenticated, async (req, re
 /* ════════════════════════════════════════
    POST trigger — fire a specific emotion event
 ════════════════════════════════════════ */
-router.post("/api/npc-emotions/trigger/:npcId", isAuthenticated, async (req, res) => {
+router.post("/npc-emotions/trigger/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const { event } = req.body as { event: string };
@@ -381,7 +381,7 @@ router.post("/api/npc-emotions/trigger/:npcId", isAuthenticated, async (req, res
 /* ════════════════════════════════════════
    GET world emotion summary
 ════════════════════════════════════════ */
-router.get("/api/npc-emotions/summary/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-emotions/summary/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id }).from(npcCores)

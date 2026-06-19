@@ -63,7 +63,7 @@ async function simulateMatch(char1: any, char2: any): Promise<{ winnerId: string
 /* ─────────────────────────────────────────────────────
    GET /api/tournament/current — giải đang diễn ra hoặc đăng ký
 ───────────────────────────────────────────────────── */
-router.get("/api/tournament/current", isAuthenticated, async (req, res) => {
+router.get("/tournament/current", isAuthenticated, async (req, res) => {
   try {
     const tournament = await getOrCreateRegistration();
     const participants = await db.select().from(tournamentParticipants)
@@ -78,7 +78,7 @@ router.get("/api/tournament/current", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/tournament/history — lịch sử các mùa
 ───────────────────────────────────────────────────── */
-router.get("/api/tournament/history", isAuthenticated, async (_req, res) => {
+router.get("/tournament/history", isAuthenticated, async (_req, res) => {
   try {
     const list = await db.select().from(tournaments)
       .where(eq(tournaments.status, "ended"))
@@ -90,7 +90,7 @@ router.get("/api/tournament/history", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/tournament/register — đăng ký tham gia
 ───────────────────────────────────────────────────── */
-router.post("/api/tournament/register", isAuthenticated, async (req, res) => {
+router.post("/tournament/register", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -129,7 +129,7 @@ router.post("/api/tournament/register", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/tournament/simulate-round — simulate 1 vòng
 ───────────────────────────────────────────────────── */
-router.post("/api/tournament/simulate-round", isAuthenticated, async (req, res) => {
+router.post("/tournament/simulate-round", isAuthenticated, async (req, res) => {
   try {
     const { tournamentId } = z.object({ tournamentId: z.string().uuid() }).parse(req.body);
 

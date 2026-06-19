@@ -79,7 +79,7 @@ Chỉ JSON, không markdown.`;
 /* ─────────────────────────────────────────────────────
    GET /api/weather/:worldSlug — thời tiết hiện tại + lịch sử
 ───────────────────────────────────────────────────── */
-router.get("/api/weather/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/weather/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     await expireOldWeather();
     const { worldSlug } = req.params as Record<string, string>;
@@ -108,7 +108,7 @@ router.get("/api/weather/:worldSlug", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/weather/all/active — tất cả thế giới có thời tiết active
 ───────────────────────────────────────────────────── */
-router.get("/api/weather/all/active", isAuthenticated, async (req, res) => {
+router.get("/weather/all/active", isAuthenticated, async (req, res) => {
   try {
     await expireOldWeather();
     const all = await db.select().from(worldWeather)
@@ -123,7 +123,7 @@ router.get("/api/weather/all/active", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/weather/generate/:worldSlug — tạo thời tiết mới (force hoặc auto)
 ───────────────────────────────────────────────────── */
-router.post("/api/weather/generate/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/weather/generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const { worldName, force } = req.body as { worldName?: string; force?: boolean };

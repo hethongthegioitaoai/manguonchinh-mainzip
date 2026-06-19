@@ -77,7 +77,7 @@ async function generateEventNarrative(worldName: string, eventType: string, step
 /* ─────────────────────────────────────────────────────
    POST /api/expedition/create — tạo đội thám hiểm
 ───────────────────────────────────────────────────── */
-router.post("/api/expedition/create", isAuthenticated, async (req, res) => {
+router.post("/expedition/create", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const body = z.object({
@@ -120,7 +120,7 @@ router.post("/api/expedition/create", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/expedition/open — danh sách expedition đang chiêu mộ
 ───────────────────────────────────────────────────── */
-router.get("/api/expedition/open", isAuthenticated, async (req, res) => {
+router.get("/expedition/open", isAuthenticated, async (req, res) => {
   try {
     const list = await db.select().from(expeditions).where(eq(expeditions.status, "recruiting")).orderBy(desc(expeditions.createdAt)).limit(20);
     res.json(list);
@@ -130,7 +130,7 @@ router.get("/api/expedition/open", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/expedition/join/:id — gia nhập đội
 ───────────────────────────────────────────────────── */
-router.post("/api/expedition/join/:id", isAuthenticated, async (req, res) => {
+router.post("/expedition/join/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params as Record<string, string>;
@@ -159,7 +159,7 @@ router.post("/api/expedition/join/:id", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/expedition/start/:id — leader tự khởi động (không cần đủ người)
 ───────────────────────────────────────────────────── */
-router.post("/api/expedition/start/:id", isAuthenticated, async (req, res) => {
+router.post("/expedition/start/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params as Record<string, string>;
@@ -178,7 +178,7 @@ router.post("/api/expedition/start/:id", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/expedition/advance/:id — tiến bước tiếp
 ───────────────────────────────────────────────────── */
-router.post("/api/expedition/advance/:id", isAuthenticated, async (req, res) => {
+router.post("/expedition/advance/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { id } = req.params as Record<string, string>;
@@ -254,7 +254,7 @@ router.post("/api/expedition/advance/:id", isAuthenticated, async (req, res) => 
 /* ─────────────────────────────────────────────────────
    GET /api/expedition/active — thám hiểm đang hoạt động của user
 ───────────────────────────────────────────────────── */
-router.get("/api/expedition/active", isAuthenticated, async (req, res) => {
+router.get("/expedition/active", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const all = await db.select().from(expeditions)
@@ -273,7 +273,7 @@ router.get("/api/expedition/active", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/expedition/events/:id — sự kiện của expedition
 ───────────────────────────────────────────────────── */
-router.get("/api/expedition/events/:id", isAuthenticated, async (req, res) => {
+router.get("/expedition/events/:id", isAuthenticated, async (req, res) => {
   try {
     const events = await db.select().from(expeditionEvents)
       .where(eq(expeditionEvents.expeditionId, req.params.id as string))
@@ -285,7 +285,7 @@ router.get("/api/expedition/events/:id", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/expedition/history — lịch sử đã kết thúc
 ───────────────────────────────────────────────────── */
-router.get("/api/expedition/history", isAuthenticated, async (req, res) => {
+router.get("/expedition/history", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const all = await db.select().from(expeditions).where(eq(expeditions.status, "ended")).orderBy(desc(expeditions.endedAt)).limit(50);

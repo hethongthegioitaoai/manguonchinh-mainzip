@@ -81,7 +81,7 @@ async function settleExpiredWars() {
 /* ─────────────────────────────────────────────────────
    GET /api/world-war/active — tất cả chiến tranh đang active
 ───────────────────────────────────────────────────── */
-router.get("/api/world-war/active", isAuthenticated, async (_req, res) => {
+router.get("/world-war/active", isAuthenticated, async (_req, res) => {
   try {
     await settleExpiredWars();
     const wars = await db.select().from(worldWars)
@@ -94,7 +94,7 @@ router.get("/api/world-war/active", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/world-war/history — chiến tranh đã kết thúc
 ───────────────────────────────────────────────────── */
-router.get("/api/world-war/history", isAuthenticated, async (_req, res) => {
+router.get("/world-war/history", isAuthenticated, async (_req, res) => {
   try {
     const wars = await db.select().from(worldWars)
       .where(eq(worldWars.status, "ended"))
@@ -106,7 +106,7 @@ router.get("/api/world-war/history", isAuthenticated, async (_req, res) => {
 /* ─────────────────────────────────────────────────────
    GET /api/world-war/:warId — chi tiết + bảng đóng góp
 ───────────────────────────────────────────────────── */
-router.get("/api/world-war/:warId", isAuthenticated, async (req, res) => {
+router.get("/world-war/:warId", isAuthenticated, async (req, res) => {
   try {
     const { warId } = req.params as Record<string, string>;
     const [war] = await db.select().from(worldWars).where(eq(worldWars.id, warId));
@@ -123,7 +123,7 @@ router.get("/api/world-war/:warId", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/world-war/declare/:targetWorldSlug — tuyên chiến
 ───────────────────────────────────────────────────── */
-router.post("/api/world-war/declare/:targetWorldSlug", isAuthenticated, async (req, res) => {
+router.post("/world-war/declare/:targetWorldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { targetWorldSlug } = req.params as Record<string, string>;
@@ -220,7 +220,7 @@ router.post("/api/world-war/declare/:targetWorldSlug", isAuthenticated, async (r
 /* ─────────────────────────────────────────────────────
    POST /api/world-war/contribute — PvP kill cộng điểm chiến tranh
 ───────────────────────────────────────────────────── */
-router.post("/api/world-war/contribute", isAuthenticated, async (req, res) => {
+router.post("/world-war/contribute", isAuthenticated, async (req, res) => {
   try {
     const { characterId, worldSlug, kills } = z.object({
       characterId: z.string().uuid(),
@@ -270,7 +270,7 @@ router.post("/api/world-war/contribute", isAuthenticated, async (req, res) => {
 /* ─────────────────────────────────────────────────────
    POST /api/world-war/:warId/surrender — đầu hàng sớm
 ───────────────────────────────────────────────────── */
-router.post("/api/world-war/:warId/surrender", isAuthenticated, async (req, res) => {
+router.post("/world-war/:warId/surrender", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { warId } = req.params as Record<string, string>;
@@ -323,7 +323,7 @@ router.post("/api/world-war/:warId/surrender", isAuthenticated, async (req, res)
 /* ─────────────────────────────────────────────────────
    POST /api/world-war/:warId/bulletin — AI sinh tường thuật chiến sự
 ───────────────────────────────────────────────────── */
-router.post("/api/world-war/:warId/bulletin", isAuthenticated, async (req, res) => {
+router.post("/world-war/:warId/bulletin", isAuthenticated, async (req, res) => {
   try {
     const { warId } = req.params as Record<string, string>;
     const [war] = await db.select().from(worldWars).where(eq(worldWars.id, warId));

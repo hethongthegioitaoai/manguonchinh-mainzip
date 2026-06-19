@@ -99,7 +99,7 @@ async function addMemory(npcId: string, event: string, importance: number) {
 /* ════════════════════════════════════════
    GET plans for a single NPC
 ════════════════════════════════════════ */
-router.get("/api/npc-plans/:npcId", isAuthenticated, async (req, res) => {
+router.get("/npc-plans/:npcId", isAuthenticated, async (req, res) => {
   try {
     const { npcId } = req.params as Record<string, string>;
     const plans = await db.select().from(npcPlans)
@@ -125,7 +125,7 @@ router.get("/api/npc-plans/:npcId", isAuthenticated, async (req, res) => {
 /* ════════════════════════════════════════
    GET all plans for a world
 ════════════════════════════════════════ */
-router.get("/api/npc-plans/world/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-plans/world/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(eq(npcCores.worldSlug, worldSlug));
@@ -158,7 +158,7 @@ router.get("/api/npc-plans/world/:worldSlug", isAuthenticated, async (req, res) 
 /* ════════════════════════════════════════
    POST auto-generate plans from active goals
 ════════════════════════════════════════ */
-router.post("/api/npc-plans/auto-generate/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-plans/auto-generate/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
@@ -213,7 +213,7 @@ router.post("/api/npc-plans/auto-generate/:worldSlug", isAuthenticated, async (r
 /* ════════════════════════════════════════
    POST tick — advance plans for a world
 ════════════════════════════════════════ */
-router.post("/api/npc-plans/tick/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-plans/tick/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
@@ -316,7 +316,7 @@ router.post("/api/npc-plans/tick/:worldSlug", isAuthenticated, async (req, res) 
 /* ════════════════════════════════════════
    GET summary stats for a world
 ════════════════════════════════════════ */
-router.get("/api/npc-plans/summary/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-plans/summary/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug));

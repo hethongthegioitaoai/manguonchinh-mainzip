@@ -34,7 +34,7 @@ const CHILD_NAMES = [
    GET /api/npc-population/:worldSlug
    Population stats + age distribution + births
 ════════════════════════════════════════ */
-router.get("/api/npc-population/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-population/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -83,7 +83,7 @@ router.get("/api/npc-population/:worldSlug", isAuthenticated, async (req, res) =
    POST /api/npc-population/run-aging/:worldSlug
    Manual trigger: age all NPCs + attempt births
 ════════════════════════════════════════ */
-router.post("/api/npc-population/run-aging/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-population/run-aging/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db.select().from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));

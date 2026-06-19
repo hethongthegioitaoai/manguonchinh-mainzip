@@ -55,7 +55,7 @@ function generateFactionName(type: string, worldSlug: string): string {
    GET /api/npc-factions/:worldSlug
    All factions with members + leader info
 ════════════════════════════════════════ */
-router.get("/api/npc-factions/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/npc-factions/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -92,7 +92,7 @@ router.get("/api/npc-factions/:worldSlug", isAuthenticated, async (req, res) => 
    - 3+ NPCs with relationship > 70
    - same profession OR same family
 ════════════════════════════════════════ */
-router.post("/api/npc-factions/auto-form/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-factions/auto-form/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 
@@ -253,7 +253,7 @@ router.post("/api/npc-factions/auto-form/:worldSlug", isAuthenticated, async (re
    POST /api/npc-factions/collect-tribute/:worldSlug
    Members contribute income → treasury grows
 ════════════════════════════════════════ */
-router.post("/api/npc-factions/collect-tribute/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/npc-factions/collect-tribute/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
 

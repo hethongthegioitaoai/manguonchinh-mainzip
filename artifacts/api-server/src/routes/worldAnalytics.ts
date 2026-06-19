@@ -130,7 +130,7 @@ async function getCivilizationMetrics(worldSlug: string, stats: Awaited<ReturnTy
 ══════════════════════════════════════════════ */
 
 // GET /api/world-analytics/stats/:worldSlug
-router.get("/api/world-analytics/stats/:worldSlug", async (req, res) => {
+router.get("/world-analytics/stats/:worldSlug", async (req, res) => {
   try {
     const stats = await getLiveStats(req.params.worldSlug);
     res.json(stats);
@@ -140,7 +140,7 @@ router.get("/api/world-analytics/stats/:worldSlug", async (req, res) => {
 });
 
 // GET /api/world-analytics/civilization/:worldSlug
-router.get("/api/world-analytics/civilization/:worldSlug", async (req, res) => {
+router.get("/world-analytics/civilization/:worldSlug", async (req, res) => {
   try {
     const stats = await getLiveStats(req.params.worldSlug);
     const metrics = await getCivilizationMetrics(req.params.worldSlug, stats);
@@ -151,7 +151,7 @@ router.get("/api/world-analytics/civilization/:worldSlug", async (req, res) => {
 });
 
 // GET /api/world-analytics/timeline/:worldSlug
-router.get("/api/world-analytics/timeline/:worldSlug", async (req, res) => {
+router.get("/world-analytics/timeline/:worldSlug", async (req, res) => {
   try {
     const limit = Number(req.query.limit ?? 50);
     const events = await db.select()
@@ -166,7 +166,7 @@ router.get("/api/world-analytics/timeline/:worldSlug", async (req, res) => {
 });
 
 // GET /api/world-analytics/chronicle/:worldSlug
-router.get("/api/world-analytics/chronicle/:worldSlug", async (req, res) => {
+router.get("/world-analytics/chronicle/:worldSlug", async (req, res) => {
   try {
     const limit = Number(req.query.limit ?? 20);
     const chronicles = await db.select()
@@ -181,7 +181,7 @@ router.get("/api/world-analytics/chronicle/:worldSlug", async (req, res) => {
 });
 
 // GET /api/world-analytics/dynasties/:worldSlug
-router.get("/api/world-analytics/dynasties/:worldSlug", async (req, res) => {
+router.get("/world-analytics/dynasties/:worldSlug", async (req, res) => {
   try {
     // Get all NPCs in world with family names
     const rows = await db
@@ -251,7 +251,7 @@ router.get("/api/world-analytics/dynasties/:worldSlug", async (req, res) => {
 });
 
 // GET /api/world-analytics/snapshots/:worldSlug
-router.get("/api/world-analytics/snapshots/:worldSlug", async (req, res) => {
+router.get("/world-analytics/snapshots/:worldSlug", async (req, res) => {
   try {
     const limit = Number(req.query.limit ?? 30);
     const snaps = await db.select()
@@ -266,7 +266,7 @@ router.get("/api/world-analytics/snapshots/:worldSlug", async (req, res) => {
 });
 
 // POST /api/world-analytics/snapshot/:worldSlug — take snapshot + auto-chronicle
-router.post("/api/world-analytics/snapshot/:worldSlug", async (req, res) => {
+router.post("/world-analytics/snapshot/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const stats = await getLiveStats(worldSlug);
@@ -352,7 +352,7 @@ function generateChronicleContent(stats: Awaited<ReturnType<typeof getLiveStats>
 }
 
 // POST /api/world-analytics/event/:worldSlug — log a timeline event
-router.post("/api/world-analytics/event/:worldSlug", async (req, res) => {
+router.post("/world-analytics/event/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const { eventType, title, description, actorName, actorId, targetName, targetId, metadata, worldYear, worldTick, importance } = req.body;
@@ -381,7 +381,7 @@ router.post("/api/world-analytics/event/:worldSlug", async (req, res) => {
 });
 
 // GET /api/world-analytics/overview/:worldSlug — all data in one call
-router.get("/api/world-analytics/overview/:worldSlug", async (req, res) => {
+router.get("/world-analytics/overview/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params;
     const [stats, events, chronicles, dynastiesRaw] = await Promise.all([

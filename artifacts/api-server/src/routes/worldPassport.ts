@@ -9,7 +9,7 @@ const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 // GET /api/passport/worlds — danh sách custom worlds public để xin nhập cảnh
-router.get("/api/passport/worlds", isAuthenticated, async (req, res) => {
+router.get("/passport/worlds", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const worlds = await db.select().from(customWorlds)
@@ -26,7 +26,7 @@ router.get("/api/passport/worlds", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/passport/my — hộ chiếu của user (tất cả nhân vật)
-router.get("/api/passport/my", isAuthenticated, async (req, res) => {
+router.get("/passport/my", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const myChars = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -57,7 +57,7 @@ router.get("/api/passport/my", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/passport/visitors/:worldSlug — creator xem khách trong thế giới của mình
-router.get("/api/passport/visitors/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/passport/visitors/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -81,7 +81,7 @@ router.get("/api/passport/visitors/:worldSlug", isAuthenticated, async (req, res
 });
 
 // POST /api/passport/request/:worldSlug — xin nhập cảnh
-router.post("/api/passport/request/:worldSlug", isAuthenticated, async (req, res) => {
+router.post("/passport/request/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;
@@ -119,7 +119,7 @@ router.post("/api/passport/request/:worldSlug", isAuthenticated, async (req, res
 });
 
 // POST /api/passport/approve/:passportId — creator approve
-router.post("/api/passport/approve/:passportId", isAuthenticated, async (req, res) => {
+router.post("/passport/approve/:passportId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { passportId } = req.params as Record<string, string>;
@@ -146,7 +146,7 @@ router.post("/api/passport/approve/:passportId", isAuthenticated, async (req, re
 });
 
 // POST /api/passport/ban/:passportId — creator ban/kick
-router.post("/api/passport/ban/:passportId", isAuthenticated, async (req, res) => {
+router.post("/passport/ban/:passportId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { passportId } = req.params as Record<string, string>;
@@ -173,7 +173,7 @@ router.post("/api/passport/ban/:passportId", isAuthenticated, async (req, res) =
 });
 
 // GET /api/passport/visit/:worldSlug — xem thế giới qua "mắt khách" (readonly + AI narrate)
-router.get("/api/passport/visit/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/passport/visit/:worldSlug", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const { worldSlug } = req.params as Record<string, string>;

@@ -73,7 +73,7 @@ const EVENT_EFFECTS = {
 };
 
 // GET /api/fate/char/:characterId — Mệnh Số + active events + last reading
-router.get("/api/fate/char/:characterId", isAuthenticated, async (req, res) => {
+router.get("/fate/char/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters)
@@ -111,7 +111,7 @@ router.get("/api/fate/char/:characterId", isAuthenticated, async (req, res) => {
 });
 
 // GET /api/fate/my-chars — danh sách nhân vật của user
-router.get("/api/fate/my-chars", isAuthenticated, async (req, res) => {
+router.get("/fate/my-chars", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const chars = await db.select().from(characters).where(eq(characters.userId, userId));
@@ -122,7 +122,7 @@ router.get("/api/fate/my-chars", isAuthenticated, async (req, res) => {
 });
 
 // POST /api/fate/trigger/:characterId — kích hoạt Mệnh Cục ngẫu nhiên (cooldown 1h)
-router.post("/api/fate/trigger/:characterId", isAuthenticated, async (req, res) => {
+router.post("/fate/trigger/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters)
@@ -206,7 +206,7 @@ Viết 2-3 câu mô tả sự kiện này xảy ra như thế nào với nhân v
 });
 
 // POST /api/fate/consult/:characterId — AI giải quẻ (xin lời khuyên vận mệnh)
-router.post("/api/fate/consult/:characterId", isAuthenticated, async (req, res) => {
+router.post("/fate/consult/:characterId", isAuthenticated, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const [char] = await db.select().from(characters)

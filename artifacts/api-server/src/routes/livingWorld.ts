@@ -63,7 +63,7 @@ Trả về JSON thuần (không markdown):
 }
 
 // GET /api/world/living/:worldSlug — full living world snapshot
-router.get("/api/world/living/:worldSlug", isAuthenticated, async (req: any, res) => {
+router.get("/world/living/:worldSlug", isAuthenticated, async (req: any, res) => {
   try {
     const { worldSlug } = req.params;
     const [world] = await db.select().from(customWorlds).where(eq(customWorlds.slug, worldSlug));
@@ -100,7 +100,7 @@ router.get("/api/world/living/:worldSlug", isAuthenticated, async (req: any, res
 });
 
 // GET /api/world/culture/:worldSlug
-router.get("/api/world/culture/:worldSlug", isAuthenticated, async (req: any, res) => {
+router.get("/world/culture/:worldSlug", isAuthenticated, async (req: any, res) => {
   try {
     const { worldSlug } = req.params;
     const [culture] = await db.select().from(worldCulture).where(eq(worldCulture.worldSlug, worldSlug));
@@ -111,7 +111,7 @@ router.get("/api/world/culture/:worldSlug", isAuthenticated, async (req: any, re
 });
 
 // POST /api/world/culture/generate/:worldSlug — AI sinh/tái sinh văn hóa
-router.post("/api/world/culture/generate/:worldSlug", isAuthenticated, async (req: any, res) => {
+router.post("/world/culture/generate/:worldSlug", isAuthenticated, async (req: any, res) => {
   try {
     const { worldSlug } = req.params;
     const userId = req.userId as string;
