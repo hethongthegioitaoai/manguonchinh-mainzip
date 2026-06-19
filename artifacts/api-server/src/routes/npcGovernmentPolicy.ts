@@ -55,7 +55,7 @@ const DEFAULT_POLICIES = [
    POST /api/npc-policy/seed
    Seed default policies if not exist
 ════════════════════════════════════════ */
-router.post("/npc-policy/seed", isAuthenticated, async (_req, res) => {
+router.post("/npc-policy/seed", async (_req, res) => {
   try {
     const existing = await db.select({ name: governmentPolicies.name }).from(governmentPolicies);
     const existingNames = new Set(existing.map(p => p.name));
