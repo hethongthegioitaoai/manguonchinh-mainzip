@@ -1478,6 +1478,44 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
       }
     }
 
+    // ── Population Dynamics ──
+    // Dân số tự tăng/giảm theo prosperity — không cần NPC can thiệp
+    const latestTerritories = await db
+      .select()
+      .from(territories)
+      .where(eq(territories.worldSlug, worldSlug));
+
+    for (const territory of latestTerritories) {
+      const pop = territory.population ?? 0;
+      let delta = 0;
+      let reason = "";
+
+      if (territory.prosperity > 70) {
+        // Vùng thịnh vượng: sinh sản tự nhiên, người ngoài định cư
+        delta = rand(0, 2);
+        if (delta > 0) reason = `Tăng dân số tự nhiên (prosperity ${territory.prosperity}/100): +${delta}`;
+      } else if (territory.prosperity < 20) {
+        // Vùng suy tàn: bỏ đi hoặc chết, không ai đến
+        delta = -rand(0, 1);
+        if (delta < 0) reason = `Giảm dân số tự nhiên (prosperity ${territory.prosperity}/100): ${delta}`;
+      }
+
+      if (delta === 0) continue;
+
+      const newPop = Math.max(0, pop + delta);
+      await db
+        .update(territories)
+        .set({ population: newPop })
+        .where(eq(territories.id, territory.id));
+
+      if (reason) {
+        await db.insert(territoryLogs).values({
+          territoryId: territory.id,
+          event: reason,
+        });
+      }
+    }
+
     // ── Cập nhật giá thị trường ──
     await updateMarketPrices(worldSlug, tickSupply, tickDemand);
 
@@ -1497,6 +1535,7 @@ router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
   const result = await tickNpcWorld(worldSlug);
   return res.json(result);
 });
+
 
 
 /* ════════════════════════════════════════
