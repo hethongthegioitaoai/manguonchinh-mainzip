@@ -12,8 +12,9 @@ import {
   worldMarket,
   marketOrders,
   territories,
+  territoryLogs,
 } from "@workspace/db/schema";
-import { eq, desc, and, or } from "drizzle-orm";
+import { eq, desc, and, or, gt, ne } from "drizzle-orm";
 
 const router = Router();
 
@@ -117,10 +118,23 @@ const FOOD_ITEMS = ["thực phẩm", "cá"];
 type TerritoryContext = { prosperity: number; security: number; name: string } | null;
 
 function generateGoal(npc: typeof npcCores.$inferSelect, territory?: TerritoryContext): string {
-  // ── Phase 3: Territory overrides (highest priority) ──
+  // ── Territory overrides (highest priority) ──
   if (territory) {
+    // Nguy hiểm: bỏ trốn
     if (territory.security < 30) return `Tìm nơi an toàn — ${territory.name} đang nguy hiểm`;
+    // Cực nghèo: kiếm tiền sống còn
     if (territory.prosperity < 25 && npc.money < 80) return `Kiếm tiền — ${territory.name} nghèo, cần tích lũy`;
+    // Nghèo trung bình: lao động xây dựng
+    if (territory.prosperity < 40 && npc.money < 150) return `Làm ăn chăm chỉ — ${territory.name} cần phát triển`;
+    // Thịnh vượng cao: giao lưu, mở rộng quan hệ
+    if (territory.prosperity >= 70 && npc.money >= 80 && npc.happiness < 80)
+      return `Giao tiếp & kết nối — ${territory.name} thịnh vượng, mở rộng quan hệ`;
+    // Rất giàu: phiêu lưu, khám phá
+    if (territory.prosperity >= 80 && npc.energy >= 60)
+      return `Khám phá — ${territory.name} giàu có, thời cơ phiêu lưu`;
+    // Cực thịnh: học tập, phát triển bản thân
+    if (territory.prosperity >= 90 && npc.money >= 100)
+      return `Học tập & phát triển — ${territory.name} cực thịnh, trau dồi bản thân`;
   }
   // ── Nhu cầu cơ bản ──
   if (npc.money < 30) return "Kiếm tiền — túi tiền gần cạn";
@@ -129,8 +143,6 @@ function generateGoal(npc: typeof npcCores.$inferSelect, territory?: TerritoryCo
   if (npc.happiness < 30) return "Giao tiếp — cần kết nối với ai đó";
   if (npc.hunger > 50) return "Tìm thức ăn — bắt đầu đói";
   if (npc.energy < 50) return "Tìm chỗ nghỉ — cần lấy lại sức";
-  // ── Territory context (lower priority) ──
-  if (territory && territory.prosperity < 40 && npc.money < 150) return `Làm ăn chăm chỉ — ${territory.name} cần phát triển`;
   if (npc.happiness < 60) return "Giải trí — tâm trạng không tốt";
   return "Khám phá — không có việc gì cấp bách";
 }
@@ -1113,8 +1125,71 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
           0,
           100,
         );
-        memoryEvent = `${npc.name} lang thang khám phá ${worldSlug}`;
-        memoryImportance = 1;
+        // ── Đa dạng memory fallback theo context ──
+        const cur = personality?.curiosity ?? 0.5;
+        const kind = personality?.kindness ?? 0.5;
+        const brave = personality?.bravery ?? 0.5;
+        const fallbackPool: Array<[string, number]> = [];
+
+        if (territory) {
+          if (territory.prosperity >= 70) {
+            fallbackPool.push(
+              [`${npc.name} dạo chơi khắp ${territory.name}, tận hưởng sự phồn thịnh`, 2],
+              [`${npc.name} ghé thăm khu chợ sầm uất tại ${territory.name}`, 2],
+              [`${npc.name} trò chuyện với dân cư ${territory.name} về tin tức địa phương`, 2],
+            );
+          } else if (territory.prosperity < 40) {
+            fallbackPool.push(
+              [`${npc.name} nhìn quanh ${territory.name}, thở dài vì cảnh nghèo khó`, 2],
+              [`${npc.name} cố tìm cơ hội kiếm thêm thu nhập ở ${territory.name}`, 2],
+            );
+          }
+        }
+
+        if (cur > 0.7) {
+          fallbackPool.push(
+            [`${npc.name} tò mò quan sát người qua lại, ghi nhớ từng chi tiết lạ`, 1],
+            [`${npc.name} khám phá một góc phố chưa từng đặt chân tới`, 2],
+            [`${npc.name} đọc bản đồ cũ, vạch ra lộ trình mới`, 1],
+          );
+        }
+        if (kind > 0.6) {
+          fallbackPool.push(
+            [`${npc.name} giúp một người lạ tìm đường`, 2],
+            [`${npc.name} ngồi trò chuyện với người già trong làng`, 1],
+          );
+        }
+        if (brave > 0.75) {
+          fallbackPool.push(
+            [`${npc.name} luyện tập chiến đấu một mình trong bóng tối`, 1],
+            [`${npc.name} tuần tra khu vực xung quanh, cảnh giác mọi động tĩnh`, 2],
+          );
+        }
+        if (npc.money < 60) {
+          fallbackPool.push(
+            [`${npc.name} đếm từng đồng tiền còn lại, lo lắng cho ngày mai`, 2],
+            [`${npc.name} tìm kiếm việc làm thêm nhưng chưa ai thuê`, 1],
+          );
+        }
+        if (npc.happiness > 75) {
+          fallbackPool.push(
+            [`${npc.name} huýt sáo vui vẻ khi đi qua khu chợ`, 1],
+            [`${npc.name} chia sẻ bữa ăn nhỏ với người hàng xóm`, 2],
+          );
+        }
+
+        // fallback cuối nếu pool rỗng
+        if (fallbackPool.length === 0) {
+          fallbackPool.push(
+            [`${npc.name} lang thang và suy nghĩ về tương lai`, 1],
+            [`${npc.name} dừng lại nhìn bầu trời, không nói gì`, 1],
+            [`${npc.name} quan sát thị trường nhưng chưa hành động`, 1],
+          );
+        }
+
+        const picked = fallbackPool[rand(0, fallbackPool.length - 1)];
+        memoryEvent = picked[0];
+        memoryImportance = picked[1];
       }
 
       const updatedNpc = {
@@ -1310,6 +1385,96 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
             );
           }
         }
+      }
+    }
+
+    // ── Territory Migration ──
+    // NPC có thể tự động di cư từ vùng nghèo/nguy hiểm → vùng thịnh vượng hơn
+    const allTerritories = await db
+      .select()
+      .from(territories)
+      .where(eq(territories.worldSlug, worldSlug));
+
+    if (allTerritories.length >= 2) {
+      for (const npc of npcs) {
+        const currentTerritory = npc.territoryId
+          ? allTerritories.find((t) => t.id === npc.territoryId)
+          : null;
+        if (!currentTerritory) continue;
+
+        // Điều kiện xét di cư: vùng cực nghèo (<25) hoặc rất nguy hiểm (<30)
+        const wantToLeave =
+          currentTerritory.prosperity < 25 || currentTerritory.security < 30;
+        if (!wantToLeave) continue;
+
+        // Tìm vùng tốt hơn đáng kể (prosperity cao hơn ít nhất 20 điểm, an toàn)
+        const candidates = allTerritories.filter(
+          (t) =>
+            t.id !== currentTerritory.id &&
+            t.prosperity > currentTerritory.prosperity + 20 &&
+            t.security >= 40,
+        );
+        if (candidates.length === 0) continue;
+
+        // 30% xác suất di cư mỗi tick khi điều kiện thỏa
+        if (Math.random() > 0.3) continue;
+
+        // Lấy thông tin NPC mới nhất để kiểm tra tiền
+        const [freshNpc] = await db
+          .select()
+          .from(npcCores)
+          .where(eq(npcCores.id, npc.id));
+        if (!freshNpc) continue;
+
+        const movingCost = rand(15, 35);
+        if (freshNpc.money < movingCost + 20) continue; // không đủ tiền di chuyển
+
+        const destination = candidates[rand(0, candidates.length - 1)];
+
+        // Thực hiện di cư
+        await db
+          .update(npcCores)
+          .set({
+            territoryId: destination.id,
+            money: clamp(freshNpc.money - movingCost, 0, 9999),
+            energy: clamp(freshNpc.energy - 25, 0, 100),
+          })
+          .where(eq(npcCores.id, npc.id));
+
+        // Cập nhật dân số territory
+        await db
+          .update(territories)
+          .set({ population: Math.max(0, (currentTerritory.population ?? 0) - 1) })
+          .where(eq(territories.id, currentTerritory.id));
+        await db
+          .update(territories)
+          .set({ population: (destination.population ?? 0) + 1 })
+          .where(eq(territories.id, destination.id));
+
+        // Ghi memory di cư (importance cao = sự kiện quan trọng)
+        await db.insert(npcCoreMemories).values({
+          npcCoreId: npc.id,
+          event: `${npc.name} rời bỏ ${currentTerritory.name} (thịnh vượng ${currentTerritory.prosperity}/100, an ninh ${currentTerritory.security}/100) và di cư đến ${destination.name} (thịnh vượng ${destination.prosperity}/100) — chi phí di chuyển ${movingCost} vàng`,
+          importance: 7,
+        });
+
+        // Ghi log territory đích
+        await db.insert(territoryLogs).values({
+          territoryId: destination.id,
+          event: `${npc.name} di cư đến từ ${currentTerritory.name} (vùng suy tàn)`,
+        });
+
+        // Ghi log territory nguồn
+        await db.insert(territoryLogs).values({
+          territoryId: currentTerritory.id,
+          event: `${npc.name} rời bỏ vùng này, đến ${destination.name}`,
+        });
+
+        logs.push({
+          name: npc.name,
+          goal: `Di cư đến ${destination.name}`,
+          action: `${npc.name} đang di chuyển từ ${currentTerritory.name} → ${destination.name}`,
+        });
       }
     }
 
