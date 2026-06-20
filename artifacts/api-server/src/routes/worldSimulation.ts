@@ -239,4 +239,25 @@ router.post("/simulation/tick/all", isAuthenticated, async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+/* POST /api/simulation/seed-defaults — upsert 3 default worlds into custom_worlds + tick */
+router.post("/simulation/seed-defaults", async (_req, res) => {
+  try {
+    const defaults = [
+      { slug: "cultivation", name: "Tu Tiên",  genre: "cultivation", description: "Võ đạo cổ xưa hoà quyện với AI thần thức.", rules: "", lore: "" },
+      { slug: "cyberpunk",   name: "Cyberpunk", genre: "cyberpunk",   description: "Siêu đô thị ngập tràn ánh đèn neon và kim loại lạnh.", rules: "", lore: "" },
+      { slug: "zombie",      name: "Hoang Phế", genre: "survival",    description: "Sinh tồn kinh dị hậu tận thế.", rules: "", lore: "" },
+    ];
+
+    for (const w of defaults) {
+      await db.insert(customWorlds).values(w).onConflictDoNothing();
+    }
+
+    // Kick off first tick for each world so worldSimState gets created
+    const results = await Promise.allSettled(defaults.map((w) => tickWorld(w.slug)));
+    const ticked = results.filter((r) => r.status === "fulfilled").length;
+
+    res.json({ seeded: defaults.length, ticked, message: `Đã seed ${defaults.length} thế giới mặc định, tick ${ticked} world` });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;
