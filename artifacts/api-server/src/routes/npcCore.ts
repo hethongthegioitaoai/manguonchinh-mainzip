@@ -1615,6 +1615,121 @@ router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
 
 
 /* ════════════════════════════════════════
+   POST /simulation/stress-test/:worldSlug  (DEV ONLY)
+   Chạy tickNpcWorld() 200 lần với DB thật,
+   validate toàn bộ constraints và report anomalies.
+════════════════════════════════════════ */
+if (process.env.NODE_ENV !== "production") {
+  router.post("/simulation/stress-test/:worldSlug", async (req, res) => {
+    const { worldSlug } = req.params as Record<string, string>;
+    const TICKS = 200;
+    const errors: string[] = [];
+    const anomalies: string[] = [];
+
+    // ── Chạy 200 tick ──
+    for (let i = 1; i <= TICKS; i++) {
+      try {
+        await tickNpcWorld(worldSlug);
+      } catch (err: any) {
+        errors.push(`Tick ${i}: ${err?.message ?? String(err)}`);
+      }
+    }
+
+    // ── Đọc trạng thái cuối từ DB thật ──
+    const [territoriesData, npcsData, marketData] = await Promise.all([
+      db.select().from(territories).where(eq(territories.worldSlug, worldSlug)),
+      db.select({
+        id: npcCores.id,
+        name: npcCores.name,
+        money: npcCores.money,
+        energy: npcCores.energy,
+        hunger: npcCores.hunger,
+        happiness: npcCores.happiness,
+        territoryId: npcCores.territoryId,
+      }).from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1))),
+      db.select().from(worldMarket).where(eq(worldMarket.worldSlug, worldSlug)),
+    ]);
+
+    // ── Validate & collect anomalies ──
+    for (const t of territoriesData) {
+      if ((t.population ?? 0) < 0)
+        anomalies.push(`[territory:${t.name}] population âm: ${t.population}`);
+      if ((t.prosperity ?? 0) < 0 || (t.prosperity ?? 0) > 100)
+        anomalies.push(`[territory:${t.name}] prosperity out of range: ${t.prosperity}`);
+      if ((t.security ?? 0) < 0 || (t.security ?? 0) > 100)
+        anomalies.push(`[territory:${t.name}] security out of range: ${t.security}`);
+    }
+
+    for (const npc of npcsData) {
+      if ((npc.money ?? 0) < 0)
+        anomalies.push(`[npc:${npc.name}] money âm: ${npc.money}`);
+      if ((npc.energy ?? 0) < 0 || (npc.energy ?? 0) > 100)
+        anomalies.push(`[npc:${npc.name}] energy out of range: ${npc.energy}`);
+      if ((npc.hunger ?? 0) < 0 || (npc.hunger ?? 0) > 100)
+        anomalies.push(`[npc:${npc.name}] hunger out of range: ${npc.hunger}`);
+      if ((npc.happiness ?? 0) < 0 || (npc.happiness ?? 0) > 100)
+        anomalies.push(`[npc:${npc.name}] happiness out of range: ${npc.happiness}`);
+    }
+
+    for (const m of marketData) {
+      if ((m.currentPrice ?? 0) <= 0)
+        anomalies.push(`[market:${m.itemName}] price không hợp lệ: ${m.currentPrice}`);
+      if ((m.totalSupply ?? 0) < 0)
+        anomalies.push(`[market:${m.itemName}] supply âm: ${m.totalSupply}`);
+      if ((m.totalDemand ?? 0) < 0)
+        anomalies.push(`[market:${m.itemName}] demand âm: ${m.totalDemand}`);
+    }
+
+    // ── Tổng hợp report ──
+    const totalPopulation = territoriesData.reduce((s, t) => s + (t.population ?? 0), 0);
+    const avgProsperity = territoriesData.length
+      ? Math.round(territoriesData.reduce((s, t) => s + (t.prosperity ?? 0), 0) / territoriesData.length)
+      : 0;
+
+    return res.json({
+      ticksRun: TICKS,
+      tickErrors: errors.length,
+      anomalyCount: anomalies.length,
+      passed: errors.length === 0 && anomalies.length === 0,
+
+      summary: {
+        totalPopulation,
+        avgProsperity,
+        territoryCount: territoriesData.length,
+        npcCount: npcsData.length,
+        marketItemCount: marketData.length,
+      },
+
+      territories: territoriesData.map((t) => ({
+        name: t.name,
+        population: t.population,
+        prosperity: t.prosperity,
+        security: t.security,
+      })),
+
+      npcs: npcsData.map((n) => ({
+        name: n.name,
+        money: n.money,
+        energy: n.energy,
+        hunger: n.hunger,
+        happiness: n.happiness,
+        territoryId: n.territoryId,
+      })),
+
+      market: marketData.map((m) => ({
+        item: m.itemName,
+        price: m.currentPrice,
+        supply: m.totalSupply,
+        demand: m.totalDemand,
+      })),
+
+      errors,
+      anomalies,
+    });
+  });
+}
+
+/* ════════════════════════════════════════
    GET market data for a world
 ════════════════════════════════════════ */
 router.get("/npc-market/:worldSlug", isAuthenticated, async (req, res) => {
