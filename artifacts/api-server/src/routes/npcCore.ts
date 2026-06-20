@@ -835,6 +835,31 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
     const tickSupply: Record<string, number> = {};
     const tickDemand: Record<string, number> = {};
 
+    // ── Territory Harvest ──
+    // Trước khi NPC làm việc, mỗi lãnh thổ tự sản xuất thực phẩm theo prosperity
+    {
+      const harvestTerritories = await db
+        .select()
+        .from(territories)
+        .where(eq(territories.worldSlug, worldSlug));
+
+      for (const t of harvestTerritories) {
+        let harvest = 0;
+        if (t.prosperity >= 70) harvest = rand(5, 15);
+        else if (t.prosperity >= 40) harvest = rand(2, 8);
+        else if (t.prosperity >= 20) harvest = rand(0, 3);
+        // prosperity < 20 → đất cằn cỗi, không sản xuất được
+
+        if (harvest > 0) {
+          tickSupply["thực phẩm"] = (tickSupply["thực phẩm"] ?? 0) + harvest;
+          await db.insert(territoryLogs).values({
+            territoryId: t.id,
+            event: `Thu hoạch mùa màng: +${harvest} thực phẩm (prosperity ${t.prosperity}/100)`,
+          });
+        }
+      }
+    }
+
     // Pre-load personalities + jobs + territories
     const personalityMap = new Map<
       string,
@@ -1478,8 +1503,61 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
       }
     }
 
+    // ── Cập nhật giá thị trường (sau harvest + NPC sản xuất) ──
+    await updateMarketPrices(worldSlug, tickSupply, tickDemand);
+
+    // ── Price → Prosperity Feedback ──
+    // Giá thực phẩm rẻ = dân no ấm → prosperity tăng | đắt = thiếu ăn → prosperity giảm
+    {
+      const [foodRow] = await db
+        .select()
+        .from(worldMarket)
+        .where(
+          and(
+            eq(worldMarket.worldSlug, worldSlug),
+            eq(worldMarket.itemName, "thực phẩm"),
+          ),
+        );
+
+      if (foodRow) {
+        const foodPrice = foodRow.currentPrice;
+        const feedbackTerritories = await db
+          .select()
+          .from(territories)
+          .where(eq(territories.worldSlug, worldSlug));
+
+        for (const t of feedbackTerritories) {
+          let prosperityDelta = 0;
+          let feedbackReason = "";
+
+          if (foodPrice <= 12) {
+            // Thực phẩm rẻ → dân no ấm → prosperity tăng
+            prosperityDelta = rand(1, 3);
+            feedbackReason = `Giá thực phẩm thấp (${foodPrice} vàng) → prosperity +${prosperityDelta}`;
+          } else if (foodPrice >= 22) {
+            // Thực phẩm đắt → đói kém → prosperity giảm
+            prosperityDelta = -rand(1, 2);
+            feedbackReason = `Giá thực phẩm cao (${foodPrice} vàng) → prosperity ${prosperityDelta}`;
+          }
+
+          if (prosperityDelta === 0) continue;
+
+          const newProsperity = clamp((t.prosperity ?? 0) + prosperityDelta, 0, 100);
+          await db
+            .update(territories)
+            .set({ prosperity: newProsperity })
+            .where(eq(territories.id, t.id));
+
+          await db.insert(territoryLogs).values({
+            territoryId: t.id,
+            event: feedbackReason,
+          });
+        }
+      }
+    }
+
     // ── Population Dynamics ──
-    // Dân số tự tăng/giảm theo prosperity — không cần NPC can thiệp
+    // Chạy SAU price feedback để dùng prosperity đã được cập nhật
     const latestTerritories = await db
       .select()
       .from(territories)
@@ -1516,9 +1594,6 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
       }
     }
 
-    // ── Cập nhật giá thị trường ──
-    await updateMarketPrices(worldSlug, tickSupply, tickDemand);
-
     return {
       message: `Đã tick ${logs.length} NPC`,
       ticked: logs.length,
@@ -1535,6 +1610,7 @@ router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
   const result = await tickNpcWorld(worldSlug);
   return res.json(result);
 });
+
 
 
 
