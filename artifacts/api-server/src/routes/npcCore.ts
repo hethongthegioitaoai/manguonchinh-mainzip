@@ -844,17 +844,20 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
         .where(eq(territories.worldSlug, worldSlug));
 
       for (const t of harvestTerritories) {
+        const pop = t.population ?? 0;
+        // Scale harvest theo dân số: log10(pop+10) ≈ 1 ở pop=0, 2 ở pop=90, 3 ở pop=990
+        const popScale = Math.max(1, Math.log10(pop + 10));
         let harvest = 0;
-        if (t.prosperity >= 70) harvest = rand(5, 15);
-        else if (t.prosperity >= 40) harvest = rand(2, 8);
-        else if (t.prosperity >= 20) harvest = rand(0, 3);
+        if (t.prosperity >= 70) harvest = Math.round(rand(5, 15) * popScale);
+        else if (t.prosperity >= 40) harvest = Math.round(rand(2, 8) * popScale);
+        else if (t.prosperity >= 20) harvest = Math.round(rand(0, 3) * popScale);
         // prosperity < 20 → đất cằn cỗi, không sản xuất được
 
         if (harvest > 0) {
           tickSupply["thực phẩm"] = (tickSupply["thực phẩm"] ?? 0) + harvest;
           await db.insert(territoryLogs).values({
             territoryId: t.id,
-            event: `Thu hoạch mùa màng: +${harvest} thực phẩm (prosperity ${t.prosperity}/100)`,
+            event: `Thu hoạch mùa màng: +${harvest} thực phẩm (prosperity ${t.prosperity}/100, pop ${pop})`,
           });
         }
       }
@@ -902,8 +905,24 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
 
       const goal = npc.currentGoal ?? "";
 
+      // ── 0. Energy Recovery — NPC ngủ nghỉ nếu kiệt sức ──
+      let skipWork = false;
+      if (newEnergy < 10) {
+        // Kiệt sức hoàn toàn: bắt buộc nghỉ ngơi
+        newEnergy = clamp(newEnergy + 40, 0, 100);
+        newHappiness = clamp(newHappiness + 5, 0, 100);
+        skipWork = true;
+        memoryEvent = `${npc.name} kiệt sức, phải nghỉ ngơi để hồi phục`;
+        memoryImportance = 1;
+      } else if (newEnergy < 20) {
+        // Mệt mỏi: tự chọn nghỉ, hồi energy
+        newEnergy = clamp(newEnergy + 40, 0, 100);
+        newHappiness = clamp(newHappiness + 5, 0, 100);
+        skipWork = true;
+      }
+
       // ── 1. Làm việc nhận lương + sản xuất ──
-      if (job) {
+      if (job && !skipWork) {
         const cfg = JOB_CONFIG[job.jobType] ?? JOB_CONFIG["thương nhân"];
         const earned = Math.round(job.salary * (0.7 + job.skillLevel * 0.6));
         newMoney = clamp(newMoney + earned, 0, 9999);
@@ -1506,18 +1525,55 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
     // ── Cập nhật giá thị trường (sau harvest + NPC sản xuất) ──
     await updateMarketPrices(worldSlug, tickSupply, tickDemand);
 
-    // ── Price → Prosperity Feedback ──
-    // Giá thực phẩm rẻ = dân no ấm → prosperity tăng | đắt = thiếu ăn → prosperity giảm
+    // ── Supply Decay — tiêu thụ + hư hỏng tự nhiên ──
+    // Không có decay → supply chạm 999 → thị trường chết
+    {
+      const decayTerritories = await db
+        .select({ population: territories.population })
+        .from(territories)
+        .where(eq(territories.worldSlug, worldSlug));
+
+      const totalPop = decayTerritories.reduce((s, t) => s + (t.population ?? 0), 0);
+
+      // Tiêu thụ theo dân số + 3% hư hỏng tự nhiên
+      // Rate nhỏ để cân bằng với harvest (harvest scale theo log10 population)
+      const consumptionMap: Record<string, number> = {
+        "thực phẩm": Math.round(totalPop * 0.04),
+        "gỗ":        Math.round(totalPop * 0.01),
+        "công cụ":   Math.round(totalPop * 0.002),
+      };
+
+      for (const [itemName, consumption] of Object.entries(consumptionMap)) {
+        const [row] = await db
+          .select()
+          .from(worldMarket)
+          .where(and(
+            eq(worldMarket.worldSlug, worldSlug),
+            eq(worldMarket.itemName, itemName),
+          ));
+        if (!row) continue;
+
+        // Tự nhiên decay 3% + tiêu thụ dân số
+        const afterDecay   = Math.floor(row.totalSupply * 0.97);
+        const afterConsume = Math.max(0, afterDecay - consumption);
+
+        await db
+          .update(worldMarket)
+          .set({ totalSupply: afterConsume })
+          .where(eq(worldMarket.id, row.id));
+      }
+    }
+
+    // ── Price → Prosperity Feedback (weighted by local capacity) ──
+    // Vùng cằn cỗi chỉ hưởng lợi một phần từ giá rẻ — không phải toàn bộ
     {
       const [foodRow] = await db
         .select()
         .from(worldMarket)
-        .where(
-          and(
-            eq(worldMarket.worldSlug, worldSlug),
-            eq(worldMarket.itemName, "thực phẩm"),
-          ),
-        );
+        .where(and(
+          eq(worldMarket.worldSlug, worldSlug),
+          eq(worldMarket.itemName, "thực phẩm"),
+        ));
 
       if (foodRow) {
         const foodPrice = foodRow.currentPrice;
@@ -1527,30 +1583,45 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
           .where(eq(territories.worldSlug, worldSlug));
 
         for (const t of feedbackTerritories) {
-          let prosperityDelta = 0;
-          let feedbackReason = "";
+          const currentProsperity = t.prosperity ?? 0;
+          const currentSecurity   = t.security ?? 0;
 
+          // localProductionFactor: vùng nghèo chỉ hưởng lợi ít từ thị trường chung
+          let localProductionFactor: number;
+          if      (currentProsperity >= 70) localProductionFactor = 1.0;
+          else if (currentProsperity >= 40) localProductionFactor = 0.5;
+          else if (currentProsperity >= 20) localProductionFactor = 0.2;
+          else                              localProductionFactor = 0.05;
+
+          // securityFactor: vùng không an toàn khó phát triển kinh tế
+          const securityFactor = clamp(currentSecurity / 100, 0.1, 1.0);
+
+          let rawDelta = 0;
           if (foodPrice <= 12) {
-            // Thực phẩm rẻ → dân no ấm → prosperity tăng
-            prosperityDelta = rand(1, 3);
-            feedbackReason = `Giá thực phẩm thấp (${foodPrice} vàng) → prosperity +${prosperityDelta}`;
+            rawDelta = rand(1, 3);  // Thực phẩm rẻ → tiềm năng tăng prosperity
           } else if (foodPrice >= 22) {
-            // Thực phẩm đắt → đói kém → prosperity giảm
-            prosperityDelta = -rand(1, 2);
-            feedbackReason = `Giá thực phẩm cao (${foodPrice} vàng) → prosperity ${prosperityDelta}`;
+            rawDelta = -rand(1, 2); // Thực phẩm đắt → giảm prosperity (không nhân hệ số, áp dụng toàn cục)
           }
 
-          if (prosperityDelta === 0) continue;
+          if (rawDelta === 0) continue;
 
-          const newProsperity = clamp((t.prosperity ?? 0) + prosperityDelta, 0, 100);
+          // Gain được nhân hệ số địa phương; loss áp dụng như nhau (đói kém không phân biệt)
+          const effectiveDelta = rawDelta > 0
+            ? Math.round(rawDelta * localProductionFactor * securityFactor)
+            : rawDelta;
+
+          if (effectiveDelta === 0) continue;
+
+          const newProsperity = clamp(currentProsperity + effectiveDelta, 0, 100);
           await db
             .update(territories)
             .set({ prosperity: newProsperity })
             .where(eq(territories.id, t.id));
 
+          const sign = effectiveDelta > 0 ? "+" : "";
           await db.insert(territoryLogs).values({
             territoryId: t.id,
-            event: feedbackReason,
+            event: `Giá thực phẩm ${foodPrice}đ × factor ${(localProductionFactor * securityFactor).toFixed(2)} → prosperity ${sign}${effectiveDelta}`,
           });
         }
       }
