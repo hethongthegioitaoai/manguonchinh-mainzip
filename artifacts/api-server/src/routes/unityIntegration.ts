@@ -134,7 +134,7 @@ router.get("/unity/world-state/:worldSlug", async (req, res) => {
   const { worldSlug } = req.params as Record<string, string>;
 
   try {
-    // ① NPC cores + emotions (single join query)
+    // ① NPC cores + emotions (single join query) — Phase 1: include territoryId
     const npcRows = await db
       .select({
         id:           npcCores.id,
@@ -145,6 +145,7 @@ router.get("/unity/world-state/:worldSlug", async (req, res) => {
         hunger:       npcCores.hunger,
         active:       npcCores.active,
         currentGoal:  npcCores.currentGoal,
+        territoryId:  npcCores.territoryId,
         // emotions
         happiness:    npcEmotions.happiness,
         anger:        npcEmotions.anger,

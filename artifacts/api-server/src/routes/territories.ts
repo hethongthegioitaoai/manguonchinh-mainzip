@@ -4,8 +4,38 @@ import { db } from "@workspace/db";
 import {
   npcFactions,
   territories, territoryResources, territoryLogs,
+  worldMarket,
 } from "@workspace/db/schema";
 import { eq, desc, and } from "drizzle-orm";
+
+/* ── Phase 2: Sync territory resource harvest → world_market supply ── */
+async function syncHarvestToMarket(worldSlug: string, resourceType: string, amount: number): Promise<void> {
+  const MARKET_RESOURCE_MAP: Record<string, string> = {
+    "thực phẩm": "thực phẩm",
+    "cá": "cá",
+    "gỗ": "gỗ",
+    "công cụ": "công cụ",
+    "vàng": "công cụ", // vàng → tương ứng công cụ trong market
+    "dân công": "công cụ", // labor → không map trực tiếp, bỏ qua
+  };
+  const marketItem = MARKET_RESOURCE_MAP[resourceType];
+  if (!marketItem || resourceType === "dân công") return;
+
+  const supplyDelta = Math.max(1, Math.floor(amount * 0.4)); // 40% harvest lên market
+
+  const [existing] = await db.select().from(worldMarket)
+    .where(and(eq(worldMarket.worldSlug, worldSlug), eq(worldMarket.itemName, marketItem)));
+
+  if (existing) {
+    await db.update(worldMarket)
+      .set({
+        totalSupply: Math.min(999, existing.totalSupply + supplyDelta),
+        lastUpdated: new Date(),
+      })
+      .where(eq(worldMarket.id, existing.id));
+  }
+  // Nếu chưa có market row thì bỏ qua (seedMarket sẽ tạo khi NPC tick)
+}
 
 const router = Router();
 
@@ -222,6 +252,9 @@ router.post("/territories/harvest/:worldSlug", isAuthenticated, async (req, res)
 
         yields.push(`+${baseAmount} ${resCfg.resource}`);
         totalHarvested += baseAmount;
+
+        // Phase 2: sync lên world_market supply
+        await syncHarvestToMarket(worldSlug, resCfg.resource, baseAmount);
       }
 
       /* Slight prosperity drift */

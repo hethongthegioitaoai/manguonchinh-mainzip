@@ -11,6 +11,7 @@ import {
   npcTransactions,
   worldMarket,
   marketOrders,
+  territories,
 } from "@workspace/db/schema";
 import { eq, desc, and, or } from "drizzle-orm";
 
@@ -113,13 +114,23 @@ const INIT_INVENTORY: Record<
 
 const FOOD_ITEMS = ["thực phẩm", "cá"];
 
-function generateGoal(npc: typeof npcCores.$inferSelect): string {
+type TerritoryContext = { prosperity: number; security: number; name: string } | null;
+
+function generateGoal(npc: typeof npcCores.$inferSelect, territory?: TerritoryContext): string {
+  // ── Phase 3: Territory overrides (highest priority) ──
+  if (territory) {
+    if (territory.security < 30) return `Tìm nơi an toàn — ${territory.name} đang nguy hiểm`;
+    if (territory.prosperity < 25 && npc.money < 80) return `Kiếm tiền — ${territory.name} nghèo, cần tích lũy`;
+  }
+  // ── Nhu cầu cơ bản ──
   if (npc.money < 30) return "Kiếm tiền — túi tiền gần cạn";
   if (npc.hunger > 70) return "Ăn uống — cơn đói hành hạ";
   if (npc.energy < 25) return "Nghỉ ngơi — kiệt sức hoàn toàn";
   if (npc.happiness < 30) return "Giao tiếp — cần kết nối với ai đó";
   if (npc.hunger > 50) return "Tìm thức ăn — bắt đầu đói";
   if (npc.energy < 50) return "Tìm chỗ nghỉ — cần lấy lại sức";
+  // ── Territory context (lower priority) ──
+  if (territory && territory.prosperity < 40 && npc.money < 150) return `Làm ăn chăm chỉ — ${territory.name} cần phát triển`;
   if (npc.happiness < 60) return "Giải trí — tâm trạng không tốt";
   return "Khám phá — không có việc gì cấp bách";
 }
@@ -700,10 +711,21 @@ router.post("/npc-core/seed/:worldSlug", async (req, res) => {
     if (existing.length > 0)
       return res.json({ message: "Đã có NPC, không cần seed lại", seeded: 0 });
 
+    // Phase 1: lấy danh sách territories của world này để gán cho NPC
+    const worldTerritories = await db
+      .select({ id: territories.id, name: territories.name, prosperity: territories.prosperity, security: territories.security })
+      .from(territories)
+      .where(eq(territories.worldSlug, worldSlug));
+
     const templates = SEED_DATA[worldSlug] ?? SEED_DATA["cultivation"];
     let seeded = 0;
 
     for (const t of templates) {
+      // Chọn ngẫu nhiên 1 territory (null nếu chưa có)
+      const assignedTerritory = worldTerritories.length > 0
+        ? worldTerritories[rand(0, worldTerritories.length - 1)]
+        : null;
+
       const [created] = await db
         .insert(npcCores)
         .values({
@@ -716,6 +738,7 @@ router.post("/npc-core/seed/:worldSlug", async (req, res) => {
           hunger: t.hunger,
           happiness: t.happiness,
           currentGoal: null,
+          territoryId: assignedTerritory?.id ?? null,
         })
         .returning();
       await db
@@ -730,7 +753,7 @@ router.post("/npc-core/seed/:worldSlug", async (req, res) => {
         });
       await db
         .update(npcCores)
-        .set({ currentGoal: generateGoal(created) })
+        .set({ currentGoal: generateGoal(created, assignedTerritory) })
         .where(eq(npcCores.id, created.id));
 
       const jobType = occupationToJob(t.occupation);
@@ -800,12 +823,13 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
     const tickSupply: Record<string, number> = {};
     const tickDemand: Record<string, number> = {};
 
-    // Pre-load personalities + jobs
+    // Pre-load personalities + jobs + territories
     const personalityMap = new Map<
       string,
       typeof npcPersonalities.$inferSelect
     >();
     const jobMap = new Map<string, typeof npcJobs.$inferSelect>();
+    const territoryMap = new Map<string, TerritoryContext>();
     for (const npc of npcs) {
       const [p] = await db
         .select()
@@ -817,11 +841,20 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
         .from(npcJobs)
         .where(eq(npcJobs.npcCoreId, npc.id));
       if (j) jobMap.set(npc.id, j);
+      // Phase 3: load territory context nếu NPC có territoryId
+      if (npc.territoryId) {
+        const [t] = await db
+          .select({ id: territories.id, name: territories.name, prosperity: territories.prosperity, security: territories.security })
+          .from(territories)
+          .where(eq(territories.id, npc.territoryId));
+        if (t) territoryMap.set(npc.id, t);
+      }
     }
 
     for (const npc of npcs) {
       const personality = personalityMap.get(npc.id) ?? null;
       const job = jobMap.get(npc.id) ?? null;
+      const territory = territoryMap.get(npc.id) ?? null;
 
       let newHunger = clamp(npc.hunger + rand(3, 8), 0, 100);
       let newEnergy = clamp(npc.energy - rand(2, 6), 0, 100);
@@ -1091,8 +1124,20 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
         hunger: newHunger,
         happiness: newHappiness,
       };
-      const newGoal = generateGoal(updatedNpc);
+      // Phase 3: truyền territory context vào generateGoal
+      const newGoal = generateGoal(updatedNpc, territory);
       const action = describeAction(updatedNpc, personality);
+
+      // Ghi memory territory nếu goal bị ảnh hưởng bởi territory
+      if (territory && newGoal.includes(territory.name) && !memoryEvent) {
+        if (territory.security < 30) {
+          memoryEvent = `${npc.name} cảm thấy bất an ở ${territory.name} — an ninh quá thấp (${territory.security}/100)`;
+          memoryImportance = 3;
+        } else if (territory.prosperity < 25) {
+          memoryEvent = `${npc.name} lo lắng vì ${territory.name} nghèo nàn (prosperity ${territory.prosperity}/100)`;
+          memoryImportance = 3;
+        }
+      }
 
       const newTickCount = (npc.tickCount ?? 0) + 1;
       const newAge =
