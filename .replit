@@ -83,5 +83,8 @@ externalPort = 3001
 
 [userenv.shared]
 
+[userenv.development]
+ENABLE_NPC_HEARTBEAT = "true"
+
 [nix]
 channel = "stable-25_05"

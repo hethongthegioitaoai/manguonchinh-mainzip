@@ -782,15 +782,15 @@ router.post("/npc-core/seed/:worldSlug", async (req, res) => {
 /* ════════════════════════════════════════
    POST run world cycle tick
 ════════════════════════════════════════ */
-router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
+export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ message: string; ticked: number; logs: Array<{ name: string; goal: string; action: string }> }> {
   try {
-    const { worldSlug } = req.params as Record<string, string>;
     const npcs = await db
       .select()
       .from(npcCores)
-      .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)));
+      .where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1)))
+      .limit(limit);
     if (npcs.length === 0)
-      return res.json({ message: "Không có NPC để tick", ticked: 0 });
+      return { message: "Không có NPC để tick", ticked: 0, logs: [] };
 
     // Đảm bảo thị trường đã được khởi tạo
     await seedMarket(worldSlug);
@@ -1271,15 +1271,21 @@ router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
     // ── Cập nhật giá thị trường ──
     await updateMarketPrices(worldSlug, tickSupply, tickDemand);
 
-    return res.json({
+    return {
       message: `Đã tick ${logs.length} NPC`,
       ticked: logs.length,
       logs,
-    });
+    };
   } catch (err) {
     console.error("[npcCore] tick:", err);
-    return res.status(500).json({ message: "Lỗi server" });
+    return { message: "Lỗi server", ticked: 0, logs: [] };
   }
+}
+
+router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
+  const { worldSlug } = req.params as Record<string, string>;
+  const result = await tickNpcWorld(worldSlug);
+  return res.json(result);
 });
 
 /* ════════════════════════════════════════
