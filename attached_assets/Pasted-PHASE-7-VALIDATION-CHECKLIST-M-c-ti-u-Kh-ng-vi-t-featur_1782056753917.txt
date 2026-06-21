@@ -1,0 +1,253 @@
+PHASE 7 VALIDATION CHECKLIST
+
+Mục tiêu:
+Không viết feature mới.
+Chỉ audit, verify và stress-test toàn bộ Phase 7 trên DB thật.
+
+Thực hiện theo thứ tự:
+
+STEP 1 — DATABASE AUDIT
+
+Kiểm tra:
+
+* world_history
+* world_snapshots
+* world_event_log
+* npc_factions
+* military_forces
+* territories
+* npc_core
+
+Xuất báo cáo:
+
+Rows count
+Indexes
+Foreign keys
+Orphan records
+Null anomalies
+
+Kết quả dạng bảng.
+
+---
+
+STEP 2 — API AUDIT
+
+Test toàn bộ endpoints:
+
+/api/unity/map-state/:worldSlug
+/api/simulation/history/:worldSlug
+/api/simulation/history/:worldSlug/timeline
+/api/simulation/events/:worldSlug
+/api/simulation/events/:worldSlug/latest
+/api/military/attack/:worldSlug
+/api/simulation/stress-test/:worldSlug
+
+Verify:
+
+* HTTP status
+* response schema
+* empty-state handling
+* auth behavior
+* latency
+
+Xuất PASS / FAIL.
+
+---
+
+STEP 3 — EVENT SYSTEM VALIDATION
+
+Tạo dữ liệu thật.
+
+Thực hiện:
+
+territory_capture
+collapse
+recolonization
+npc_migrate
+army_move
+army_arrived
+siege
+faction_leader_changed
+
+Verify:
+
+* event được ghi vào world_event_log
+* event broadcast qua WS
+* event xuất hiện trong Event Feed
+* event xuất hiện trong History
+
+Báo cáo số lượng event từng loại.
+
+---
+
+STEP 4 — SNAPSHOT VALIDATION
+
+Chạy 300 ticks.
+
+Kiểm tra:
+
+Snapshot tạo mỗi 50 tick
+Tick:
+50
+100
+150
+200
+250
+300
+
+Verify:
+
+* snapshot count đúng
+* aggregate fields đúng
+* replay load đúng tick
+
+PASS/FAIL.
+
+---
+
+STEP 5 — POLITICAL MAP VALIDATION
+
+Seed world đầy đủ.
+
+Verify:
+
+* territories render
+* faction colors render
+* army markers render
+* NPC clusters render
+* tooltip hoạt động
+* heatmaps hoạt động
+* ownership panel hoạt động
+* event inspector hoạt động
+
+Chụp screenshot nếu có thể.
+
+---
+
+STEP 6 — WAR VALIDATION
+
+Tạo:
+
+Faction A
+Faction B
+
+Army A > Army B
+
+Thực hiện attack.
+
+Verify:
+
+* combat diễn ra
+* refugees sinh ra
+* security giảm
+* population giảm
+* ownerFactionId đổi
+* territory_capture event được tạo
+* history record được tạo
+
+Xuất before/after.
+
+---
+
+STEP 7 — COLLAPSE → RECOLONIZATION CHAIN
+
+Tạo territory yếu.
+
+Chạy tick tới collapse.
+
+Verify:
+
+active → abandoned → ruins
+
+Sau đó:
+
+tạo settlers
+recolonize
+
+Verify:
+
+ruins → active
+
+Kiểm tra:
+
+population
+prosperity
+security
+history events
+
+PASS/FAIL.
+
+---
+
+STEP 8 — 1000 TICK STRESS TEST
+
+Chạy:
+
+1000 ticks
+
+Theo dõi:
+
+population
+prosperity
+security
+treasury
+militaryPower
+foodSupply
+event volume
+
+Verify:
+
+Không crash
+Không infinite growth
+Không negative values
+Không NaN
+Không orphan records
+
+Xuất:
+
+PASS count
+FAIL count
+WARN count
+
+---
+
+STEP 9 — REGRESSION CHECK
+
+Đảm bảo các hệ thống cũ vẫn hoạt động:
+
+NPC Tick
+Memory
+Market
+Migration
+Population
+Economy
+Faction
+Army
+War
+History
+Snapshots
+Political Map
+Event Feed
+
+Xuất checklist cuối cùng.
+
+---
+
+FINAL OUTPUT
+
+Sinh báo cáo:
+
+PHASE_7_VALIDATION_REPORT.md
+
+Bao gồm:
+
+Executive Summary
+Metrics
+Screenshots
+PASS/FAIL table
+Known Issues
+Recommended Fixes
+Readiness Score (%)
+
+Không implement feature mới.
+Chỉ audit và xác nhận trạng thái thực tế của hệ thống.
