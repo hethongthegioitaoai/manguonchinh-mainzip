@@ -184,9 +184,15 @@ router.post("/military/recruit/:worldSlug", isAuthenticated, async (req, res) =>
 
     for (const army of armies) {
       const gov = govs.find(g => g.id === army.governmentId);
-      if (!gov || gov.treasury < 50) continue;
+      const terr = terrs.find(t => t.id === army.territoryId);
 
-      const recruited = Math.floor(eligibleNpcs.length * (baseRate + Math.random() * 0.05));
+      /* ── Bước 2: Recruitment gate — treasury + prosperity + population ── */
+      if (!gov || gov.treasury < 50) continue;
+      if (!terr || terr.prosperity <= 30 || terr.population <= 20) continue;
+
+      // Tuyển chậm hơn khi thịnh vượng thấp
+      const prosperityMult = terr.prosperity < 50 ? 0.4 : terr.prosperity < 70 ? 0.7 : 1.0;
+      const recruited = Math.floor(eligibleNpcs.length * (baseRate + Math.random() * 0.05) * prosperityMult);
       if (recruited === 0) continue;
 
       const newSoldiers = army.totalSoldiers + recruited;
@@ -333,6 +339,24 @@ router.post("/military/supply/:worldSlug", isAuthenticated, async (req, res) => 
         });
         mems.push({ armyId: army.id, content: `Thiếu lương thực quân sự — tinh thần suy giảm nghiêm trọng.` });
         starved++;
+
+        /* ── Bước 1: Army supply/morale → Territory security ── */
+        const terr = terrs.find(t => t.id === army.territoryId);
+        if (terr) {
+          let secDelta = 0;
+          if (newSupply < 20) secDelta -= rand(1, 3);   // thiếu lương trầm trọng
+          if (newMorale < 30) secDelta -= rand(1, 2);   // tinh thần sụp đổ
+          if (secDelta < 0) {
+            const newSec = clamp(terr.security + secDelta, 0, 100);
+            await db.update(territories)
+              .set({ security: Math.round(newSec), updatedAt: new Date() })
+              .where(eq(territories.id, terr.id));
+            await db.insert(npcGovernmentLogs).values({
+              governmentId: gov.id,
+              event: `An ninh ${terr.name} giảm ${Math.abs(secDelta).toFixed(1)} điểm do quân đội thiếu tiếp tế`,
+            });
+          }
+        }
       }
 
       await db.update(militaryForces)

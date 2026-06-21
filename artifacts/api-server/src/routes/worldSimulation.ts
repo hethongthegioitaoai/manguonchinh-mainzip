@@ -245,6 +245,84 @@ router.post("/simulation/tick/all", isAuthenticated, async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+/* POST /api/simulation/stress-test/:worldSlug — chạy N ticks liên tục, trả báo cáo ổn định */
+router.post("/simulation/stress-test/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const ticks = Math.min(Number(req.body?.ticks ?? 200), 500);
+
+    let [state] = await db.select().from(worldSimState).where(eq(worldSimState.worldSlug, worldSlug));
+    if (!state) {
+      const { state: s } = await tickWorld(worldSlug);
+      if (!s) return res.status(404).json({ error: "Không tìm thấy thế giới" });
+      state = s;
+    }
+
+    const snapshots: { tick: number; population: number; economyScore: number; stability: number; avgMood: number }[] = [];
+    const events: string[] = [];
+    let anomalies = 0;
+    let crashes   = 0;
+
+    const initPop  = state.population;
+    const initEcon = state.economyScore;
+
+    for (let i = 0; i < ticks; i++) {
+      try {
+        const result = await tickWorld(worldSlug);
+        if (!result.state) { crashes++; continue; }
+
+        const s = result.state;
+
+        /* ─ Anomaly checks ─ */
+        if (s.population < 0)     { anomalies++; events.push(`Tick ${i+1}: population âm (${s.population})`); }
+        if (s.economyScore < 0 || s.economyScore > 100) { anomalies++; events.push(`Tick ${i+1}: economyScore ngoài [0,100] (${s.economyScore.toFixed(1)})`); }
+        if (s.avgMood < 0 || s.avgMood > 100)           { anomalies++; events.push(`Tick ${i+1}: avgMood ngoài [0,100] (${s.avgMood.toFixed(1)})`); }
+        if (s.stability < 0 || s.stability > 100)       { anomalies++; events.push(`Tick ${i+1}: stability ngoài [0,100] (${s.stability.toFixed(1)})`); }
+        if (s.population > initPop * 100)                { anomalies++; events.push(`Tick ${i+1}: population RUNAWAY (${s.population})`); }
+        if (s.economyScore > 99.5 && i > 50)             { anomalies++; events.push(`Tick ${i+1}: economy kẹt cực đại`); }
+
+        if (i % Math.max(1, Math.floor(ticks / 10)) === 0) {
+          snapshots.push({ tick: i + 1, population: s.population, economyScore: parseFloat(s.economyScore.toFixed(2)), stability: parseFloat(s.stability.toFixed(2)), avgMood: parseFloat(s.avgMood.toFixed(2)) });
+        }
+      } catch (e) {
+        crashes++;
+        events.push(`Tick ${i+1}: crash — ${(e as Error).message?.slice(0, 80)}`);
+      }
+    }
+
+    const [finalState] = await db.select().from(worldSimState).where(eq(worldSimState.worldSlug, worldSlug));
+
+    const econValues  = snapshots.map(s => s.economyScore);
+    const econMin     = econValues.length ? Math.min(...econValues) : 0;
+    const econMax     = econValues.length ? Math.max(...econValues) : 0;
+    const econOsc     = econMax - econMin;
+
+    const report = {
+      worldSlug,
+      ticks,
+      anomalies,
+      crashes,
+      passed: anomalies === 0 && crashes === 0,
+      initial: { population: initPop, economyScore: parseFloat(initEcon.toFixed(2)) },
+      final: finalState ? {
+        population:   finalState.population,
+        economyScore: parseFloat(finalState.economyScore.toFixed(2)),
+        avgMood:      parseFloat(finalState.avgMood.toFixed(2)),
+        stability:    parseFloat(finalState.stability.toFixed(2)),
+        totalTicks:   finalState.totalTicks,
+      } : null,
+      economy: { min: parseFloat(econMin.toFixed(2)), max: parseFloat(econMax.toFixed(2)), oscillation: parseFloat(econOsc.toFixed(2)) },
+      snapshots,
+      issues: events,
+      verdict: anomalies === 0 && crashes === 0 ? "✅ PASS" : `❌ FAIL — ${anomalies} anomaly, ${crashes} crash`,
+    };
+
+    return res.json(report);
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 /* POST /api/simulation/seed-defaults — upsert 3 default worlds into custom_worlds + tick */
 router.post("/simulation/seed-defaults", async (_req, res) => {
   try {
