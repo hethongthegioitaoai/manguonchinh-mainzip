@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, jsonb, timestamp, boolean, integer, real } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, jsonb, timestamp, boolean, integer, real, index } from "drizzle-orm/pg-core";
 
 export const worldSimState = pgTable("world_sim_state", {
   id:             uuid("id").primaryKey().defaultRandom(),
@@ -28,7 +28,10 @@ export const worldSimLog = pgTable("world_sim_log", {
   deltaMood:       real("delta_mood").notNull().default(0),
   deltaStability:  real("delta_stability").notNull().default(0),
   happenedAt:      timestamp("happened_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  worldHappenedIdx: index("world_sim_log_world_happened_idx").on(t.worldSlug, t.happenedAt),
+  worldTickIdx:     index("world_sim_log_world_tick_idx").on(t.worldSlug, t.tickNumber),
+}));
 
 export type WorldSimState = typeof worldSimState.$inferSelect;
 export type WorldSimLog = typeof worldSimLog.$inferSelect;

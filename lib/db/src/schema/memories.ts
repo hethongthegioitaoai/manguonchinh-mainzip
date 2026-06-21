@@ -1,4 +1,4 @@
-import { pgTable, varchar, uuid, timestamp, text, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, varchar, uuid, timestamp, text, integer, jsonb, index } from "drizzle-orm/pg-core";
 import { characters } from "./characters";
 
 export const characterMemories = pgTable("character_memories", {
@@ -18,7 +18,10 @@ export const npcMemories = pgTable("npc_memories", {
   relationship: integer("relationship").notNull().default(0),
   lastInteraction: timestamp("last_interaction").defaultNow(),
   notes: text("notes").default(""),
-});
+}, (t) => ({
+  characterIdx:    index("npc_memories_character_idx").on(t.characterId),
+  npcKeyIdx:       index("npc_memories_npc_key_idx").on(t.npcKey),
+}));
 
 export const worldMemories = pgTable("world_memories", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, json, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, json, timestamp, index } from "drizzle-orm/pg-core";
 
 export interface SnapshotTerritory {
   id: string;
@@ -63,7 +63,9 @@ export const worldSnapshots = pgTable("world_snapshots", {
   tick:      integer("tick").notNull(),
   data:      json("data").$type<WorldSnapshotData>().notNull().default({} as WorldSnapshotData),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  worldTickIdx: index("world_snapshots_world_tick_idx").on(t.worldSlug, t.tick),
+}));
 
 export type WorldSnapshot       = typeof worldSnapshots.$inferSelect;
 export type InsertWorldSnapshot = typeof worldSnapshots.$inferInsert;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, text, timestamp, index } from "drizzle-orm/pg-core";
 import { npcFactions } from "./npcFactions";
 
 export const territories = pgTable("territories", {
@@ -17,7 +17,10 @@ export const territories = pgTable("territories", {
   lastHarvestAt:   timestamp("last_harvest_at"),
   createdAt:       timestamp("created_at").defaultNow(),
   updatedAt:       timestamp("updated_at").defaultNow(),
-});
+}, (t) => ({
+  worldSlugIdx: index("territories_world_slug_idx").on(t.worldSlug),
+  statusIdx:    index("territories_world_status_idx").on(t.worldSlug, t.status),
+}));
 
 export const territoryResources = pgTable("territory_resources", {
   id:          uuid("id").primaryKey().defaultRandom(),
@@ -32,7 +35,9 @@ export const territoryLogs = pgTable("territory_logs", {
   territoryId: uuid("territory_id").notNull().references(() => territories.id, { onDelete: "cascade" }),
   event:       text("event").notNull(),
   createdAt:   timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  territoryCreatedIdx: index("territory_logs_territory_created_idx").on(t.territoryId, t.createdAt),
+}));
 
 export type Territory = typeof territories.$inferSelect;
 export type InsertTerritory = typeof territories.$inferInsert;
