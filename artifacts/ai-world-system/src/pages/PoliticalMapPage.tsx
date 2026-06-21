@@ -20,7 +20,8 @@ interface Army {
 }
 interface HistoryEvent { id: string; tick: number; eventType: string; title: string; description: string; actors: any; createdAt: string }
 interface TimelineEvent { id: string; tick: number; eventType: string; title: string; createdAt: string }
-interface MapState { worldSlug: string; ts: number; territories: Territory[]; factions: Faction[]; armies: Army[]; recentHistory: HistoryEvent[] }
+interface Npc { id: string; name: string; occupation: string; territoryId: string | null; energy: number; hunger: number; happiness: number; currentGoal: string | null }
+interface MapState { worldSlug: string; ts: number; territories: Territory[]; factions: Faction[]; armies: Army[]; npcs: Npc[]; recentHistory: HistoryEvent[] }
 interface SnapshotTerritory { id: string; name: string; type: string; x: number; y: number; terrain: string; status: string; population: number; prosperity: number; security: number; ownerFactionId: string | null; ownerFactionName: string | null; militaryPower: number; foodSupply: number }
 interface SnapshotFaction { id: string; name: string; type: string; influence: number; treasury: number; militaryPower: number; territoryCount: number }
 interface SnapshotArmy { id: string; name: string; territoryId: string; soldiers: number; power: number; morale: number; supply: number }
@@ -87,6 +88,35 @@ function factionColor(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return PALETTE[h % PALETTE.length];
+}
+
+/* ─── NPC occupation color ────────────────────────────────── */
+const OCC_COLORS: Record<string, string> = {
+  "Thương Nhân": "#f59e0b",
+  "Nông Dân":    "#22c55e",
+  "Chiến Sĩ":   "#ef4444",
+  "Tu Sĩ":      "#8b5cf6",
+  "Học Giả":    "#8b5cf6",
+  "Đạo Nhân":   "#8b5cf6",
+  "Thợ Rèn":    "#f97316",
+  "Thợ":        "#f97316",
+  "Ngư Dân":    "#06b6d4",
+  "Dân Thường": "#6b7280",
+};
+function occColor(occ: string): string {
+  for (const key of Object.keys(OCC_COLORS)) {
+    if (occ.includes(key)) return OCC_COLORS[key];
+  }
+  return "#6b7280";
+}
+function occIcon(occ: string): string {
+  if (occ.includes("Thương")) return "💰";
+  if (occ.includes("Nông"))   return "🌾";
+  if (occ.includes("Chiến") || occ.includes("Quân")) return "⚔";
+  if (occ.includes("Tu") || occ.includes("Đạo") || occ.includes("Học")) return "📿";
+  if (occ.includes("Thợ"))    return "🔨";
+  if (occ.includes("Ngư"))    return "🎣";
+  return "👤";
 }
 
 function heatColor(value: number, mode: HeatMode): string {
@@ -164,6 +194,10 @@ export default function PoliticalMapPage() {
   const [showArmies, setShowArmies]   = useState(true);
   const [heatMode, setHeatMode]       = useState<HeatMode>("none");
   const [highlightFaction, setHighlightFaction] = useState<string | null>(null);
+
+  /* Phase 64 — NPC Layer */
+  const [showNpcs, setShowNpcs] = useState(true);
+  const [hoveredNpcTerritoryId, setHoveredNpcTerritoryId] = useState<string | null>(null);
 
   /* Phase 63B — Army hover tooltip */
   const [hoveredArmyId, setHoveredArmyId] = useState<string | null>(null);
@@ -255,6 +289,19 @@ export default function PoliticalMapPage() {
   const maxTick = timeline.length > 0 ? Math.max(...timeline.map(t => t.tick)) : 0;
   const [sliderTick, setSliderTick] = useState(0);
   useEffect(() => { if (maxTick > 0 && !snapshotMode) setSliderTick(maxTick); }, [maxTick, snapshotMode]);
+
+  /* Phase 64 — NPC clusters by territory */
+  const npcs: Npc[] = mapState?.npcs ?? [];
+  const npcsByTerritory = useMemo(() => {
+    const m = new Map<string, Npc[]>();
+    for (const n of npcs) {
+      if (!n.territoryId) continue;
+      const arr = m.get(n.territoryId) ?? [];
+      arr.push(n);
+      m.set(n.territoryId, arr);
+    }
+    return m;
+  }, [npcs]);
 
   let territories: Array<Territory | SnapshotTerritory> = [];
   let factions:    Array<Faction | SnapshotFaction>     = [];
@@ -376,6 +423,12 @@ export default function PoliticalMapPage() {
           <button onClick={() => setShowArmies(v => !v)}
             className={`px-2 py-1 rounded border ${showArmies ? "border-red-600 text-red-400" : "border-gray-700 text-gray-500"}`}>
             ⚔ Quân
+          </button>
+
+          <button onClick={() => setShowNpcs(v => !v)}
+            className={`px-2 py-1 rounded border ${showNpcs ? "border-purple-600 text-purple-400" : "border-gray-700 text-gray-500"}`}
+            title={`NPC: ${npcs.length} người`}>
+            👥 NPC{npcs.length > 0 ? ` (${npcs.length})` : ""}
           </button>
 
           {/* Live / snapshot toggle */}
@@ -727,6 +780,101 @@ export default function PoliticalMapPage() {
                             : isSieging ? "⚔ đang vây hãm"
                             : "● chờ lệnh"}
                         </text>
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* ── Phase 64 — NPC Cluster Layer ── */}
+              {showNpcs && !snapshotMode && territories.map((t: any) => {
+                const cluster = npcsByTerritory.get(t.id);
+                if (!cluster || cluster.length === 0) return null;
+                const cx = sx(t.x);
+                const cy = sy(t.y);
+                const count = cluster.length;
+                const hovered = hoveredNpcTerritoryId === t.id;
+
+                /* dominant occupation in this territory */
+                const occFreq: Record<string, number> = {};
+                for (const n of cluster) occFreq[n.occupation] = (occFreq[n.occupation] ?? 0) + 1;
+                const topOcc = Object.entries(occFreq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Dân Thường";
+                const clusterColor = occColor(topOcc);
+
+                /* cluster position: bottom-left of territory node */
+                const clx = cx - NODE_BASE - 2;
+                const cly = cy + NODE_BASE + 2;
+                const r = count >= 20 ? 10 : count >= 10 ? 8 : count >= 5 ? 7 : 6;
+
+                /* top 5 NPCs for hover detail */
+                const top5 = cluster.slice(0, 5);
+                const ttW = 130, ttH = 16 + top5.length * 14;
+
+                return (
+                  <g key={`npc-cluster-${t.id}`}
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredNpcTerritoryId(t.id)}
+                    onMouseLeave={() => setHoveredNpcTerritoryId(null)}>
+
+                    {/* Glow ring when hovered */}
+                    {hovered && (
+                      <circle cx={clx} cy={cly} r={r + 4}
+                        fill="none" stroke={clusterColor} strokeWidth="1"
+                        opacity={0.5} strokeDasharray="2 2"/>
+                    )}
+
+                    {/* Cluster dot */}
+                    <circle cx={clx} cy={cly} r={r}
+                      fill={hovered ? "#1a0a2e" : "#0d0d1a"}
+                      stroke={clusterColor}
+                      strokeWidth={hovered ? 1.5 : 1}
+                      opacity={0.92}/>
+
+                    {/* Count or icon */}
+                    {count <= 3 ? (
+                      <text x={clx} y={cly + 1} textAnchor="middle" dominantBaseline="middle"
+                        fontSize="6" style={{ pointerEvents: "none" }}>
+                        {occIcon(topOcc)}
+                      </text>
+                    ) : (
+                      <text x={clx} y={cly + 1} textAnchor="middle" dominantBaseline="middle"
+                        fontSize="5.5" fill={clusterColor} fontWeight="bold"
+                        style={{ pointerEvents: "none" }}>
+                        {count >= 100 ? "99+" : count}
+                      </text>
+                    )}
+
+                    {/* Hover tooltip */}
+                    {hovered && (
+                      <g style={{ pointerEvents: "none" }}>
+                        <rect x={clx - ttW - 4} y={cly - ttH / 2}
+                          width={ttW} height={ttH}
+                          rx="4" fill="#0a0a18" stroke="#374151" strokeWidth="1"
+                          filter="url(#glow)"/>
+                        {/* Header */}
+                        <text x={clx - ttW + 6} y={cly - ttH / 2 + 10}
+                          fontSize="7" fill={clusterColor} fontWeight="bold">
+                          {count} NPC — {t.name}
+                        </text>
+                        {/* NPC list */}
+                        {top5.map((n, i) => (
+                          <g key={n.id}>
+                            <text x={clx - ttW + 6} y={cly - ttH / 2 + 22 + i * 14}
+                              fontSize="6" fill="#e5e7eb">
+                              {occIcon(n.occupation)} {n.name.length > 14 ? n.name.slice(0, 13) + "…" : n.name}
+                            </text>
+                            <text x={clx - 10} y={cly - ttH / 2 + 22 + i * 14}
+                              fontSize="6" fill="#6b7280">
+                              ⚡{n.energy} 🍖{n.hunger > 0 ? n.hunger : 0}
+                            </text>
+                          </g>
+                        ))}
+                        {count > 5 && (
+                          <text x={clx - ttW + 6} y={cly - ttH / 2 + 22 + 5 * 14}
+                            fontSize="6" fill="#6b7280">
+                            +{count - 5} người khác…
+                          </text>
+                        )}
                       </g>
                     )}
                   </g>

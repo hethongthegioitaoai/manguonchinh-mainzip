@@ -592,6 +592,31 @@ router.get("/unity/map-state/:worldSlug", async (req, res) => {
       }
     }
 
+    // NPCs grouped by territory (Phase 64 — NPC Layer)
+    const npcRows = await db.select({
+      id:          npcCores.id,
+      name:        npcCores.name,
+      occupation:  npcCores.occupation,
+      territoryId: npcCores.territoryId,
+      energy:      npcCores.energy,
+      hunger:      npcCores.hunger,
+      happiness:   npcCores.happiness,
+      currentGoal: npcCores.currentGoal,
+    }).from(npcCores)
+      .where(eq(npcCores.worldSlug, worldSlug))
+      .limit(300);
+
+    const npcDTOs = npcRows.map(n => ({
+      id:          n.id,
+      name:        n.name,
+      occupation:  n.occupation,
+      territoryId: n.territoryId ?? null,
+      energy:      n.energy,
+      hunger:      n.hunger,
+      happiness:   n.happiness,
+      currentGoal: n.currentGoal ?? null,
+    }));
+
     // Recent history events (last 20)
     const { worldHistory } = await import("@workspace/db/schema");
     const histRows = await db.select({
@@ -629,6 +654,7 @@ router.get("/unity/map-state/:worldSlug", async (req, res) => {
       territories: territoryDTOs,
       factions: factionRows,
       armies: armyData,
+      npcs: npcDTOs,
       recentHistory: histRows,
     });
   } catch (err) {
