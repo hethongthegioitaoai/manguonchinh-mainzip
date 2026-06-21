@@ -92,6 +92,7 @@ import PlayerAgentPage from "@/pages/PlayerAgentPage";
 import StressTestPage from "@/pages/StressTestPage";
 import WorldMapPage from "@/pages/WorldMapPage";
 import PoliticalMapPage from "@/pages/PoliticalMapPage";
+import SimulationAnalyticsPage from "@/pages/SimulationAnalyticsPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
 
@@ -192,6 +193,7 @@ function Router() {
       <Route path="/stress-test" component={StressTestPage} />
       <Route path="/world-map" component={WorldMapPage} />
       <Route path="/political-map" component={PoliticalMapPage} />
+      <Route path="/simulation-analytics" component={SimulationAnalyticsPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/verify-email" component={VerifyEmailPage} />

@@ -37,11 +37,24 @@ export interface SnapshotArmy {
   supply: number;
 }
 
+export interface WorldSnapshotAggregates {
+  populationTotal: number;
+  activeCount: number;
+  ruinsCount: number;
+  factionCount: number;
+  armyCount: number;
+  avgFoodSupply: number;
+  avgProsperity: number;
+  avgSecurity: number;
+  totalMilitaryPower: number;
+}
+
 export interface WorldSnapshotData {
   tick: number;
   territories: SnapshotTerritory[];
   factions: SnapshotFaction[];
   armies: SnapshotArmy[];
+  aggregates?: WorldSnapshotAggregates;
 }
 
 export const worldSnapshots = pgTable("world_snapshots", {

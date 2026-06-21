@@ -182,6 +182,14 @@ export default function WorldSimulationPage() {
           <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/political-map")}
+            className="text-cyan-500 hover:text-cyan-300 text-xs">
+            🗺 Bản Đồ
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/simulation-analytics")}
+            className="text-violet-400 hover:text-violet-200 text-xs">
+            <BarChart3 className="w-3.5 h-3.5 mr-1" /> Analytics
+          </Button>
         </div>
 
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">

@@ -7,7 +7,7 @@ import {
   worldHistory, worldSnapshots,
   npcFactions, militaryForces,
 } from "@workspace/db/schema";
-import type { WorldSnapshotData } from "@workspace/db/schema";
+import type { WorldSnapshotData, WorldSnapshotAggregates } from "@workspace/db/schema";
 import { eq, and, desc, lt, sql, inArray, asc, lte } from "drizzle-orm";
 import { applyGovernmentPolicies } from "./npcGovernmentPolicy.js";
 import { tickNpcWorld } from "./npcCore.js";
@@ -105,24 +105,42 @@ async function saveWorldSnapshot(worldSlug: string, tick: number): Promise<void>
       }
     }
 
+    const snapshotTerrs = terrs.map(t => ({
+      id:               t.id,
+      name:             t.name,
+      type:             t.type,
+      x:                t.x ?? 50,
+      y:                t.y ?? 50,
+      terrain:          t.terrain ?? "plains",
+      status:           t.status ?? "active",
+      population:       t.population ?? 0,
+      prosperity:       t.prosperity ?? 50,
+      security:         t.security ?? 50,
+      ownerFactionId:   t.ownerFactionId ?? null,
+      ownerFactionName: t.factionName ?? null,
+      militaryPower:    armies.find(a => a.territoryId === t.id)?.power ?? 0,
+      foodSupply:       Math.round(clamp((t.prosperity ?? 50) * 0.6 + (t.security ?? 50) * 0.4, 0, 100)),
+    }));
+
+    const activeTerrs  = snapshotTerrs.filter(t => t.status === "active");
+    const ruinsTerrs   = snapshotTerrs.filter(t => t.status === "ruins");
+    const avg = (arr: number[]) => arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+
+    const aggregates: WorldSnapshotAggregates = {
+      populationTotal:  activeTerrs.reduce((s, t) => s + t.population, 0),
+      activeCount:      activeTerrs.length,
+      ruinsCount:       ruinsTerrs.length,
+      factionCount:     factionRows.length,
+      armyCount:        armies.reduce((s, a) => s + a.soldiers, 0),
+      avgFoodSupply:    avg(activeTerrs.map(t => t.foodSupply)),
+      avgProsperity:    avg(activeTerrs.map(t => t.prosperity)),
+      avgSecurity:      avg(activeTerrs.map(t => t.security)),
+      totalMilitaryPower: armies.reduce((s, a) => s + (a.power ?? 0), 0),
+    };
+
     const snapshotData: WorldSnapshotData = {
       tick,
-      territories: terrs.map(t => ({
-        id:               t.id,
-        name:             t.name,
-        type:             t.type,
-        x:                t.x ?? 50,
-        y:                t.y ?? 50,
-        terrain:          t.terrain ?? "plains",
-        status:           t.status ?? "active",
-        population:       t.population ?? 0,
-        prosperity:       t.prosperity ?? 50,
-        security:         t.security ?? 50,
-        ownerFactionId:   t.ownerFactionId ?? null,
-        ownerFactionName: t.factionName ?? null,
-        militaryPower:    armies.find(a => a.territoryId === t.id)?.power ?? 0,
-        foodSupply:       Math.round(clamp((t.prosperity ?? 50) * 0.6 + (t.security ?? 50) * 0.4, 0, 100)),
-      })),
+      territories: snapshotTerrs,
       factions: factionRows.map(f => ({
         id:             f.id,
         name:           f.name,
@@ -141,6 +159,7 @@ async function saveWorldSnapshot(worldSlug: string, tick: number): Promise<void>
         morale:      a.morale,
         supply:      a.supply,
       })),
+      aggregates,
     };
 
     await db.insert(worldSnapshots).values({
@@ -685,6 +704,100 @@ router.get("/simulation/territory-detail/:worldSlug/:id", async (req, res) => {
       army: army ?? null,
       history: historyRows,
     });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+/* ─── Phase 61: POST /api/simulation/snapshot-now/:worldSlug — force snapshot at current tick ─── */
+router.post("/simulation/snapshot-now/:worldSlug", async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const [state] = await db.select().from(worldSimState).where(eq(worldSimState.worldSlug, worldSlug));
+    const tick = state?.currentTick ?? 0;
+    await saveWorldSnapshot(worldSlug, tick);
+    return res.json({ ok: true, tick });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+/* ─── Phase 61: GET /api/simulation/analytics/:worldSlug — time-series from snapshots ─── */
+router.get("/simulation/analytics/:worldSlug", async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const limit = Math.min(200, parseInt(req.query.limit as string || "200"));
+
+    const rows = await db
+      .select({ tick: worldSnapshots.tick, data: worldSnapshots.data, createdAt: worldSnapshots.createdAt })
+      .from(worldSnapshots)
+      .where(eq(worldSnapshots.worldSlug, worldSlug))
+      .orderBy(asc(worldSnapshots.tick))
+      .limit(limit);
+
+    const series = rows.map(r => {
+      const d = r.data as WorldSnapshotData;
+      const agg = d.aggregates;
+      const activeTerrs = d.territories.filter(t => t.status === "active");
+      const avg = (arr: number[]) => arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+      return {
+        tick:             d.tick,
+        createdAt:        r.createdAt,
+        populationTotal:  agg?.populationTotal  ?? activeTerrs.reduce((s, t) => s + t.population, 0),
+        activeCount:      agg?.activeCount      ?? activeTerrs.length,
+        ruinsCount:       agg?.ruinsCount       ?? d.territories.filter(t => t.status === "ruins").length,
+        factionCount:     agg?.factionCount     ?? d.factions.length,
+        armyCount:        agg?.armyCount        ?? d.armies.reduce((s, a) => s + a.soldiers, 0),
+        avgFoodSupply:    agg?.avgFoodSupply     ?? avg(activeTerrs.map(t => t.foodSupply)),
+        avgProsperity:    agg?.avgProsperity     ?? avg(activeTerrs.map(t => t.prosperity)),
+        avgSecurity:      agg?.avgSecurity       ?? avg(activeTerrs.map(t => t.security)),
+        totalMilitaryPower: agg?.totalMilitaryPower ?? d.armies.reduce((s, a) => s + (a.power ?? 0), 0),
+      };
+    });
+
+    return res.json({ worldSlug, count: series.length, series });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+/* ─── Phase 62: GET /api/simulation/faction-timeline/:worldSlug/:factionId ─── */
+router.get("/simulation/faction-timeline/:worldSlug/:factionId", async (req, res) => {
+  try {
+    const { worldSlug, factionId } = req.params as Record<string, string>;
+
+    const [faction] = await db
+      .select({ id: npcFactions.id, name: npcFactions.name, type: npcFactions.type })
+      .from(npcFactions)
+      .where(and(eq(npcFactions.id, factionId), eq(npcFactions.worldSlug, worldSlug)));
+    if (!faction) return res.status(404).json({ error: "Faction not found" });
+
+    const rows = await db
+      .select({ tick: worldSnapshots.tick, data: worldSnapshots.data })
+      .from(worldSnapshots)
+      .where(eq(worldSnapshots.worldSlug, worldSlug))
+      .orderBy(asc(worldSnapshots.tick))
+      .limit(200);
+
+    const timeline = rows.map(r => {
+      const d = r.data as WorldSnapshotData;
+      const f = d.factions.find(x => x.id === factionId);
+      return {
+        tick:           d.tick,
+        territories:    f?.territoryCount   ?? 0,
+        treasury:       f?.treasury         ?? 0,
+        military:       f?.militaryPower    ?? 0,
+        influence:      f?.influence        ?? 0,
+      };
+    }).filter(t => t.territories > 0 || t.treasury > 0 || t.military > 0 || t.influence > 0);
+
+    const events = await db
+      .select({ id: worldHistory.id, tick: worldHistory.tick, eventType: worldHistory.eventType, title: worldHistory.title })
+      .from(worldHistory)
+      .where(
+        and(
+          eq(worldHistory.worldSlug, worldSlug),
+          sql`actors->'factions' @> to_jsonb(${factionId}::text)`
+        )
+      )
+      .orderBy(asc(worldHistory.tick))
+      .limit(100);
+
+    return res.json({ faction, timeline, events });
   } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
