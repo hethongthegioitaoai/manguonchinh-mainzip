@@ -85,6 +85,7 @@ import playerAgentRouter from "./playerAgent.js";
 import unityIntegrationRouter from "./unityIntegration.js";
 import multiWorldTestRouter from "./multiWorldTest.js";
 import tradeRoutesRouter from "./tradeRoutes.js";
+import unityDeltaRouter from "./unityDelta.js";
 
 const router: IRouter = Router();
 
@@ -174,5 +175,6 @@ router.use(worldMapRouter);
 router.use(unityIntegrationRouter);
 router.use(multiWorldTestRouter);
 router.use(tradeRoutesRouter);
+router.use(unityDeltaRouter);
 
 export default router;
