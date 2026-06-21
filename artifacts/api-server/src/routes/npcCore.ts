@@ -15,6 +15,7 @@ import {
   territoryLogs,
   npcFactions,
   npcFactionMembers,
+  npcFactionMemories,
 } from "@workspace/db/schema";
 import { eq, desc, and, or, gt, ne } from "drizzle-orm";
 
@@ -1754,13 +1755,33 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
 
     // ── Faction System ──
     // Phase 3: Tax Collection  →  treasury
-    // Phase 4: Leadership Check (NPC leader rời đi → bầu người mới)
-    // Phase 5: Army Building   →  militaryPower khi treasury dư
+    // Phase 4: Leadership Check
+    // Phase 4.5: Logistics / Upkeep  (army costs treasury each tick)
+    // Phase 4.6: Food Support         (army needs food from market)
+    // Phase 5: Recruitment Gate       (treasury + food + prosperity threshold)
+    // Phase 6: War v1                 (strongest faction attacks weakest neighbour)
     {
       const factions = await db
         .select()
         .from(npcFactions)
         .where(eq(npcFactions.worldSlug, worldSlug));
+
+      // ── Lấy tổng food supply từ market một lần cho cả tick ──
+      const foodRows = await db
+        .select({ itemName: worldMarket.itemName, totalSupply: worldMarket.totalSupply })
+        .from(worldMarket)
+        .where(and(
+          eq(worldMarket.worldSlug, worldSlug),
+          or(eq(worldMarket.itemName, "thực phẩm"), eq(worldMarket.itemName, "cá")),
+        ));
+      const totalFoodInMarket = foodRows.reduce((s, r) => s + (r.totalSupply ?? 0), 0);
+
+      // Tổng số lãnh thổ active trong world (để tính phần food của mỗi faction)
+      const allActiveTerritories = await db
+        .select({ id: territories.id, ownerFactionId: territories.ownerFactionId })
+        .from(territories)
+        .where(and(eq(territories.worldSlug, worldSlug), eq(territories.status, "active")));
+      const totalTerritoryCount = allActiveTerritories.length || 1;
 
       for (const faction of factions) {
         // ── 3. Thu thuế từ mọi lãnh thổ thuộc faction ──
@@ -1774,7 +1795,7 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
 
         let totalTax = 0;
         for (const t of ownedTerritories) {
-          if ((t.status ?? "active") !== "active") continue; // lãnh thổ sụp đổ không đóng thuế
+          if ((t.status ?? "active") !== "active") continue;
           const pop = t.population ?? 0;
           const pros = t.prosperity ?? 0;
           const tax = Math.floor(pop * pros * 0.05);
@@ -1795,7 +1816,6 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
             .from(npcCores)
             .where(eq(npcCores.id, leaderNpcId));
           if (!leader || leader.active !== 1) {
-            // Lãnh đạo không còn → bầu thành viên kỳ cựu nhất làm lãnh đạo mới
             const [newLeaderMember] = await db
               .select()
               .from(npcFactionMembers)
@@ -1805,7 +1825,6 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
               ))
               .orderBy(npcFactionMembers.joinedAt)
               .limit(1);
-
             leaderNpcId = newLeaderMember?.npcId ?? null;
             if (leaderNpcId) {
               await db
@@ -1816,37 +1835,198 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
           }
         }
 
-        // ── 5. Nạp treasury + tuyển quân ──
-        const currentTreasury = (faction.treasury ?? 0) + totalTax;
-        let newMilitary = faction.militaryPower ?? 0;
-        let newInfluence = faction.influence ?? 0;
-        let recruitmentCost = 0;
+        // ── 4.5. Logistics / Upkeep ──
+        // Mỗi tick quân đội tiêu thụ treasury; nếu khánh kiệt → đào ngũ
+        let afterTaxTreasury = (faction.treasury ?? 0) + totalTax;
+        let currentMilitary = faction.militaryPower ?? 0;
 
-        if (currentTreasury > 5000) {
-          // Tuyển quân: tốn vàng, tăng military power
-          const recruit = rand(1, 5);
-          recruitmentCost = recruit * rand(40, 80);
-          newMilitary = clamp(newMilitary + recruit, 0, 9999);
+        const armyCost = Math.floor(currentMilitary * 0.5);
+        afterTaxTreasury -= armyCost;
+
+        if (afterTaxTreasury < 0) {
+          // Thiếu lương → quân đào ngũ 5%
+          const deserters = Math.ceil(currentMilitary * 0.05);
+          currentMilitary = Math.max(0, currentMilitary - deserters);
+          afterTaxTreasury = 0;
+          // Ghi log vào lãnh thổ đầu tiên của faction
+          if (ownedTerritories[0]) {
+            await db.insert(territoryLogs).values({
+              territoryId: ownedTerritories[0].id,
+              event: `[Logistics] ${faction.name} hết ngân sách trả lương (-${armyCost}đ) → ${deserters} quân đào ngũ, còn ${currentMilitary}`,
+            });
+          }
         }
 
-        // Influence tăng dựa trên prosperity trung bình + quân sự
+        // ── 4.6. Food Support for Army ──
+        // Tính phần food market mà faction này "sở hữu" theo tỉ lệ lãnh thổ
+        const factionTerritoryCount = ownedTerritories.filter(t => t.status === "active").length;
+        const factionFoodShare = (factionTerritoryCount / totalTerritoryCount) * totalFoodInMarket;
+        const foodNeed = currentMilitary * 0.1;
+
+        if (foodNeed > 0 && factionFoodShare < foodNeed) {
+          // Quân thiếu ăn → phạt lãnh thổ + quân giảm nhẹ
+          const foodShortfall = foodNeed - factionFoodShare;
+          const militaryPenalty = Math.ceil(foodShortfall * 0.5);
+          currentMilitary = Math.max(0, currentMilitary - militaryPenalty);
+
+          for (const t of ownedTerritories) {
+            if ((t.status ?? "active") !== "active") continue;
+            const newSecurity  = clamp((t.security  ?? 50) - 2, 0, 100);
+            const newHappiness = clamp((t.prosperity ?? 50) - 2, 0, 100); // prosperity ≈ proxy happiness
+            await db
+              .update(territories)
+              .set({ security: newSecurity, prosperity: newHappiness })
+              .where(eq(territories.id, t.id));
+            await db.insert(territoryLogs).values({
+              territoryId: t.id,
+              event: `[Food] ${faction.name} thiếu lương thực quân đội (cần ${foodNeed.toFixed(1)}, có ${factionFoodShare.toFixed(1)}) → security -2, prosperity -2`,
+            });
+          }
+        }
+
+        // ── 5. Recruitment Gate ──
+        // Điều kiện: treasury > 5000 AND food đủ AND avgProsperity > 30
         const avgPros = ownedTerritories.length > 0
           ? Math.round(ownedTerritories.reduce((s, t) => s + (t.prosperity ?? 0), 0) / ownedTerritories.length)
           : 0;
+
+        let newInfluence = faction.influence ?? 0;
+        let recruitmentCost = 0;
+
+        const foodOk = factionFoodShare >= foodNeed || currentMilitary === 0;
+        const canRecruit = afterTaxTreasury > 5000 && foodOk && avgPros > 30;
+
+        if (canRecruit) {
+          const recruit = rand(1, 5);
+          recruitmentCost = recruit * rand(40, 80);
+          currentMilitary = clamp(currentMilitary + recruit, 0, 9999);
+        }
+
         if (avgPros > 50) newInfluence = clamp(newInfluence + 1, 0, 9999);
 
-        const finalTreasury = Math.max(0, currentTreasury - recruitmentCost);
+        const finalTreasury = Math.max(0, afterTaxTreasury - recruitmentCost);
 
         await db
           .update(npcFactions)
           .set({
             treasury:      finalTreasury,
-            militaryPower: newMilitary,
+            militaryPower: currentMilitary,
             influence:     newInfluence,
             leaderNpcId:   leaderNpcId,
             updatedAt:     new Date(),
           })
           .where(eq(npcFactions.id, faction.id));
+      }
+
+      // ── 6. War v1 ──
+      // Mỗi tick: 25% cơ hội có chiến tranh. Faction mạnh nhất tấn công lãnh thổ của faction yếu hơn.
+      if (Math.random() < 0.25 && factions.length >= 2) {
+        // Đọc lại militaryPower sau khi đã update
+        const updatedFactions = await db
+          .select()
+          .from(npcFactions)
+          .where(eq(npcFactions.worldSlug, worldSlug));
+
+        // Chọn attacker: faction có militaryPower cao nhất với treasury > 0
+        const attackerCandidates = updatedFactions
+          .filter(f => (f.militaryPower ?? 0) > 10 && (f.treasury ?? 0) > 0)
+          .sort((a, b) => (b.militaryPower ?? 0) - (a.militaryPower ?? 0));
+
+        if (attackerCandidates.length > 0) {
+          const attacker = attackerCandidates[0];
+
+          // Tìm lãnh thổ active của faction khác (không phải attacker)
+          const targetTerritories = await db
+            .select()
+            .from(territories)
+            .where(and(
+              eq(territories.worldSlug, worldSlug),
+              eq(territories.status, "active"),
+              ne(territories.ownerFactionId, attacker.id),
+            ));
+
+          if (targetTerritories.length > 0) {
+            // Chọn ngẫu nhiên 1 lãnh thổ mục tiêu
+            const target = targetTerritories[Math.floor(Math.random() * targetTerritories.length)];
+            const defenderFactionId = target.ownerFactionId;
+
+            const defenderFaction = defenderFactionId
+              ? updatedFactions.find(f => f.id === defenderFactionId)
+              : null;
+
+            // Tính sức mạnh phòng thủ = quân faction + security lãnh thổ
+            const defenderMilitary = defenderFaction?.militaryPower ?? 0;
+            const defenderPower    = defenderMilitary + (target.security ?? 50);
+            const attackerPower    = attacker.militaryPower ?? 0;
+
+            if (attackerPower > defenderPower * 1.3) {
+              // ── CHIẾN TRANH BÙ NỔ ──
+              const popLoss       = Math.floor((target.population ?? 0) * rand(5, 15) / 100);
+              const securityDrop  = rand(15, 30);
+              const newPop        = Math.max(0, (target.population ?? 0) - popLoss);
+              const newSecurity   = clamp((target.security ?? 50) - securityDrop, 0, 100);
+
+              await db
+                .update(territories)
+                .set({
+                  ownerFactionId: attacker.id,
+                  population:     newPop,
+                  security:       newSecurity,
+                  updatedAt:      new Date(),
+                })
+                .where(eq(territories.id, target.id));
+
+              await db.insert(territoryLogs).values({
+                territoryId: target.id,
+                event: `[WAR] ${attacker.name} (ATK:${attackerPower}) đánh chiếm ${target.name} từ ${defenderFaction?.name ?? "vô chủ"} (DEF:${defenderPower}) — dân -${popLoss}, security -${securityDrop}`,
+              });
+
+              // Chi phí chiến tranh cho attacker (10% treasury)
+              const warCost = Math.floor((attacker.treasury ?? 0) * 0.1);
+              await db
+                .update(npcFactions)
+                .set({ treasury: Math.max(0, (attacker.treasury ?? 0) - warCost), updatedAt: new Date() })
+                .where(eq(npcFactions.id, attacker.id));
+
+              // NPC trong lãnh thổ ghi nhớ chiến tranh
+              const residentNpcs = await db
+                .select({ id: npcCores.id, name: npcCores.name })
+                .from(npcCores)
+                .where(and(
+                  eq(npcCores.territoryId, target.id),
+                  eq(npcCores.active, 1),
+                ))
+                .limit(10);
+
+              const warMemories = [
+                `Chiến tranh bùng nổ tại ${target.name} — ${attacker.name} đã chiếm lãnh thổ`,
+                `${attacker.name} đã chiếm ${target.name}, ${popLoss} người thiệt mạng`,
+                `Gia đình tôi rời bỏ quê hương ${target.name} vì chiến tranh`,
+              ];
+
+              for (const npc of residentNpcs) {
+                const memory = warMemories[Math.floor(Math.random() * warMemories.length)];
+                await db.insert(npcFactionMemories).values({
+                  npcId:     npc.id,
+                  factionId: attacker.id,
+                  content:   `${npc.name}: "${memory}"`,
+                });
+                // Di cư khỏi lãnh thổ bị chiếm (25% cơ hội)
+                if (Math.random() < 0.25) {
+                  const saferTerritory = allActiveTerritories.find(
+                    t => t.id !== target.id && t.ownerFactionId !== null,
+                  );
+                  if (saferTerritory) {
+                    await db
+                      .update(npcCores)
+                      .set({ territoryId: saferTerritory.id })
+                      .where(eq(npcCores.id, npc.id));
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
