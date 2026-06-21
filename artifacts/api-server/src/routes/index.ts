@@ -83,6 +83,7 @@ import worldAnalyticsRouter from "./worldAnalytics.js";
 import stressTestRouter from "./stressTest.js";
 import playerAgentRouter from "./playerAgent.js";
 import unityIntegrationRouter from "./unityIntegration.js";
+import multiWorldTestRouter from "./multiWorldTest.js";
 
 const router: IRouter = Router();
 
@@ -170,5 +171,6 @@ router.use(stressTestRouter);
 router.use(playerAgentRouter);
 router.use(worldMapRouter);
 router.use(unityIntegrationRouter);
+router.use(multiWorldTestRouter);
 
 export default router;
