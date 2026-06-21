@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 
@@ -10,7 +10,14 @@ interface Territory {
   owner: string | null; ownerId: string | null;
 }
 interface Faction { id: string; name: string; type: string; influence: number; treasury: number; militaryPower?: number }
-interface Army { id: string; name: string; territoryId: string; soldiers: number; power: number; morale: number; supply: number }
+interface ArmyPosition { x: number; y: number; tick: number }
+interface Army {
+  id: string; name: string; territoryId: string;
+  currentTerritoryId?: string; targetTerritoryId?: string | null;
+  movementProgress?: number; movementStatus?: string;
+  recentPositions?: ArmyPosition[];
+  soldiers: number; power: number; morale: number; supply: number;
+}
 interface HistoryEvent { id: string; tick: number; eventType: string; title: string; description: string; actors: any; createdAt: string }
 interface TimelineEvent { id: string; tick: number; eventType: string; title: string; createdAt: string }
 interface MapState { worldSlug: string; ts: number; territories: Territory[]; factions: Faction[]; armies: Army[]; recentHistory: HistoryEvent[] }
@@ -158,6 +165,16 @@ export default function PoliticalMapPage() {
   const [heatMode, setHeatMode]       = useState<HeatMode>("none");
   const [highlightFaction, setHighlightFaction] = useState<string | null>(null);
 
+  /* Phase 63B — Army hover tooltip */
+  const [hoveredArmyId, setHoveredArmyId] = useState<string | null>(null);
+
+  /* Phase 63E — Siege blink ticker */
+  const [siegeBlink, setSiegeBlink] = useState(false);
+  useEffect(() => {
+    const t = setInterval(() => setSiegeBlink(b => !b), 700);
+    return () => clearInterval(t);
+  }, []);
+
   /* Phase 57 — Ownership overlay panel */
   const [detailPanelId, setDetailPanelId] = useState<string | null>(null);
 
@@ -267,6 +284,37 @@ export default function PoliticalMapPage() {
 
   const armyMap = new Map<string, Army | SnapshotArmy>();
   armies.forEach((a: any) => { if (a.territoryId) armyMap.set(a.territoryId, a); });
+
+  /* Phase 63C — Lerp helper */
+  function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+
+  /* Phase 63C — compute actual SVG position for an army (handles MOVING lerp) */
+  function armySvgPos(a: any): { cx: number; cy: number } | null {
+    const terrMap = new Map(territories.map((t: any) => [t.id, t]));
+    const curId = a.currentTerritoryId || a.territoryId;
+    const curTerr = terrMap.get(curId) as any;
+    if (!curTerr) return null;
+
+    if (a.movementStatus === "moving" && a.targetTerritoryId) {
+      const tgtTerr = terrMap.get(a.targetTerritoryId) as any;
+      if (tgtTerr) {
+        const p = Math.max(0, Math.min(1, a.movementProgress ?? 0));
+        return { cx: lerp(sx(curTerr.x), sx(tgtTerr.x), p), cy: lerp(sy(curTerr.y), sy(tgtTerr.y), p) };
+      }
+    }
+    return { cx: sx(curTerr.x) + NODE_BASE + 4, cy: sy(curTerr.y) - NODE_BASE - 4 };
+  }
+
+  /* Phase 63E — set of territory IDs being sieged */
+  const siegedTerritoryIds = useMemo(() => {
+    const s = new Set<string>();
+    armies.forEach((a: any) => {
+      if (a.movementStatus === "sieging" && (a.currentTerritoryId || a.targetTerritoryId)) {
+        s.add(a.currentTerritoryId || a.targetTerritoryId);
+      }
+    });
+    return s;
+  }, [armies]);
 
   const selectedTerritory = territories.find(t => t.id === selectedId) ?? null;
   const selectedFaction   = selectedTerritory ? factions.find((f: any) => f.id === (selectedTerritory as any).ownerId || f.id === (selectedTerritory as any).ownerFactionId) : null;
@@ -510,27 +558,177 @@ export default function PoliticalMapPage() {
                         {(t.owner || t.ownerFactionName || "").slice(0, 14)}
                       </text>
                     )}
+
+                    {/* Phase 63E — Siege overlay: blinking red ring */}
+                    {siegedTerritoryIds.has(t.id) && (
+                      <g style={{ pointerEvents: "none" }}>
+                        <circle cx={cx} cy={cy} r={radius + 12}
+                          fill="none" stroke="#ef4444"
+                          strokeWidth="2.5"
+                          strokeDasharray="6 3"
+                          opacity={siegeBlink ? 1 : 0.2}
+                          style={{ transition: "opacity 0.3s" }}/>
+                        <circle cx={cx} cy={cy} r={radius + 18}
+                          fill="rgba(239,68,68,0.06)"
+                          stroke="#ef4444" strokeWidth="1"
+                          opacity={siegeBlink ? 0.7 : 0.1}/>
+                        <text x={cx} y={cy - radius - 16} textAnchor="middle"
+                          fontSize="8" fill="#ef4444" fontWeight="bold"
+                          opacity={siegeBlink ? 1 : 0.3}>
+                          🔴 BỊ BAO VÂY
+                        </text>
+                      </g>
+                    )}
                   </g>
                 );
               })}
 
-              {/* Army markers */}
-              {showArmies && armies.filter((a: any) => (a.soldiers ?? a.totalSoldiers ?? 0) > 0).map((a: any) => {
-                const terr = territories.find((t: any) => t.id === a.territoryId);
-                if (!terr) return null;
-                const cx2 = sx(terr.x) + NODE_BASE + 4;
-                const cy2 = sy(terr.y) - NODE_BASE - 4;
-                const ownerId2 = (terr as any).ownerId ?? (terr as any).ownerFactionId;
-                const color = ownerId2 ? factionColor(ownerId2) : "#ef4444";
+              {/* ── Phase 63D — Movement Lines (from → to) ── */}
+              {showArmies && !snapshotMode && armies
+                .filter((a: any) => a.movementStatus === "moving" && a.targetTerritoryId)
+                .map((a: any) => {
+                  const terrMap = new Map(territories.map((t: any) => [t.id, t]));
+                  const fromTerr = terrMap.get(a.currentTerritoryId || a.territoryId) as any;
+                  const toTerr   = terrMap.get(a.targetTerritoryId) as any;
+                  if (!fromTerr || !toTerr) return null;
+                  return (
+                    <line key={`mv-line-${a.id}`}
+                      x1={sx(fromTerr.x)} y1={sy(fromTerr.y)}
+                      x2={sx(toTerr.x)}   y2={sy(toTerr.y)}
+                      stroke="#f97316" strokeWidth="1.5" strokeDasharray="5 3" opacity={0.4}
+                      style={{ pointerEvents: "none" }}/>
+                  );
+                })
+              }
+
+              {/* ── Phase 63D — Trail dots ── */}
+              {showArmies && !snapshotMode && armies.map((a: any) => {
+                const trail: ArmyPosition[] = a.recentPositions ?? [];
+                if (trail.length < 2) return null;
                 return (
-                  <g key={a.id}>
-                    <circle cx={cx2} cy={cy2} r={10} fill="#1a0505" stroke={color} strokeWidth="1.5"/>
-                    <text x={cx2} y={cy2 + 1} textAnchor="middle" dominantBaseline="middle" fontSize="10"
-                      style={{ pointerEvents: "none" }}>⚔</text>
-                    <text x={cx2} y={cy2 + 14} textAnchor="middle" fontSize="6.5" fill={color}
+                  <g key={`trail-${a.id}`} style={{ pointerEvents: "none" }}>
+                    {trail.slice(-8).map((pt, i, arr) => {
+                      const opacity = 0.1 + 0.7 * (i / (arr.length - 1));
+                      const r = 1.5 + 2 * (i / (arr.length - 1));
+                      return (
+                        <circle key={i}
+                          cx={sx(pt.x)} cy={sy(pt.y)} r={r}
+                          fill="#f97316" opacity={opacity}/>
+                      );
+                    })}
+                  </g>
+                );
+              })}
+
+              {/* ── Phase 63B/C — Army Markers ── */}
+              {showArmies && armies.filter((a: any) => (a.soldiers ?? 0) > 0).map((a: any) => {
+                const pos = armySvgPos(a);
+                if (!pos) return null;
+                const { cx: cx2, cy: cy2 } = pos;
+
+                const curId    = a.currentTerritoryId || a.territoryId;
+                const terr     = territories.find((t: any) => t.id === curId) as any;
+                const ownerId2 = terr?.ownerId ?? terr?.ownerFactionId ?? null;
+                const color    = ownerId2 ? factionColor(ownerId2) : "#ef4444";
+
+                const status: string = a.movementStatus ?? "idle";
+                const isMoving  = status === "moving";
+                const isSieging = status === "sieging";
+
+                const hovered = hoveredArmyId === a.id;
+
+                /* Soldiers display */
+                const solDisplay = (a.soldiers ?? 0) > 999
+                  ? `${((a.soldiers ?? 0) / 1000).toFixed(1)}k`
+                  : String(a.soldiers ?? 0);
+
+                /* Status badge color */
+                const statusColor = isMoving ? "#f97316" : isSieging ? "#ef4444" : "#6b7280";
+                const statusIcon  = isMoving ? "→" : isSieging ? "⚔" : "•";
+
+                return (
+                  <g key={a.id}
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredArmyId(a.id)}
+                    onMouseLeave={() => setHoveredArmyId(null)}>
+
+                    {/* Glow ring for MOVING/SIEGING */}
+                    {(isMoving || isSieging) && (
+                      <circle cx={cx2} cy={cy2} r={14}
+                        fill="none" stroke={statusColor}
+                        strokeWidth="1.5" opacity={0.5}
+                        strokeDasharray={isSieging ? "3 2" : "none"}/>
+                    )}
+
+                    {/* Main circle */}
+                    <circle cx={cx2} cy={cy2} r={10}
+                      fill={hovered ? "#1f0a0a" : "#1a0505"}
+                      stroke={hovered ? "#fff" : color}
+                      strokeWidth={hovered ? 2 : 1.5}
+                      filter={hovered ? "url(#glow)" : undefined}/>
+
+                    {/* ⚔ Icon */}
+                    <text x={cx2} y={cy2 + 1} textAnchor="middle" dominantBaseline="middle"
+                      fontSize="10" style={{ pointerEvents: "none" }}>⚔</text>
+
+                    {/* Soldiers count below */}
+                    <text x={cx2} y={cy2 + 14} textAnchor="middle"
+                      fontSize="6.5" fill={color} fontWeight="bold"
                       style={{ pointerEvents: "none" }}>
-                      {(a.soldiers ?? 0) > 999 ? `${((a.soldiers ?? 0)/1000).toFixed(1)}k` : (a.soldiers ?? 0)}
+                      {solDisplay}
                     </text>
+
+                    {/* Status indicator (→ moving, ⚔ sieging) */}
+                    {(isMoving || isSieging) && (
+                      <text x={cx2 + 12} y={cy2 - 8} textAnchor="middle"
+                        fontSize="9" fill={statusColor}
+                        style={{ pointerEvents: "none" }}>
+                        {statusIcon}
+                      </text>
+                    )}
+
+                    {/* Phase 63B — Hover tooltip */}
+                    {hovered && (
+                      <g style={{ pointerEvents: "none" }}>
+                        {/* Tooltip background */}
+                        <rect x={cx2 + 14} y={cy2 - 58} width={110} height={70}
+                          rx="4" fill="#0a0a0f" stroke="#374151" strokeWidth="1"
+                          filter="url(#glow)"/>
+                        {/* Army name */}
+                        <text x={cx2 + 20} y={cy2 - 44}
+                          fontSize="7.5" fill="#e5e7eb" fontWeight="bold">
+                          {a.name.length > 16 ? a.name.slice(0, 14) + "…" : a.name}
+                        </text>
+                        {/* Soldiers */}
+                        <text x={cx2 + 20} y={cy2 - 33}
+                          fontSize="6.5" fill="#9ca3af">
+                          {`⚔ ${a.soldiers} quân`}
+                        </text>
+                        {/* Power */}
+                        <text x={cx2 + 20} y={cy2 - 23}
+                          fontSize="6.5" fill="#ef4444">
+                          {`⚡ ${Math.round(a.power ?? 0)} sức mạnh`}
+                        </text>
+                        {/* Morale */}
+                        <text x={cx2 + 20} y={cy2 - 13}
+                          fontSize="6.5" fill={a.morale > 60 ? "#22c55e" : a.morale > 30 ? "#f59e0b" : "#ef4444"}>
+                          {`🔥 ${Math.round(a.morale ?? 0)} tinh thần`}
+                        </text>
+                        {/* Supply */}
+                        <text x={cx2 + 20} y={cy2 - 3}
+                          fontSize="6.5" fill={a.supply > 50 ? "#84cc16" : "#f97316"}>
+                          {`📦 ${Math.round(a.supply ?? 0)} tiếp tế`}
+                        </text>
+                        {/* Status */}
+                        <text x={cx2 + 20} y={cy2 + 7}
+                          fontSize="6.5" fill={statusColor}>
+                          {isMoving
+                            ? `→ di chuyển ${Math.round((a.movementProgress ?? 0) * 100)}%`
+                            : isSieging ? "⚔ đang vây hãm"
+                            : "● chờ lệnh"}
+                        </text>
+                      </g>
+                    )}
                   </g>
                 );
               })}

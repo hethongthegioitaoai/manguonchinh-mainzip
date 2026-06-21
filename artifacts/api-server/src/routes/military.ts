@@ -654,4 +654,183 @@ router.post("/military/attack/:worldSlug", isAuthenticated, async (req, res) => 
   }
 });
 
+/* ════════════════════════════════════════
+   Phase 63A — POST /api/military/move-order/:worldSlug
+   Phát lệnh di chuyển cho một quân đội
+   Body: { armyId, targetTerritoryId }
+════════════════════════════════════════ */
+router.post("/military/move-order/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const { armyId, targetTerritoryId } = req.body as { armyId: string; targetTerritoryId: string };
+    if (!armyId || !targetTerritoryId) {
+      return res.status(400).json({ message: "Thiếu armyId / targetTerritoryId" });
+    }
+
+    const [army] = await db.select().from(militaryForces).where(eq(militaryForces.id, armyId));
+    if (!army) return res.status(404).json({ message: "Không tìm thấy quân đội" });
+
+    const [targetTerr] = await db.select().from(territories).where(eq(territories.id, targetTerritoryId));
+    if (!targetTerr) return res.status(404).json({ message: "Không tìm thấy lãnh thổ đích" });
+    if (targetTerr.worldSlug !== worldSlug) return res.status(400).json({ message: "Lãnh thổ đích không thuộc thế giới này" });
+    if (targetTerritoryId === (army.currentTerritoryId ?? army.territoryId)) {
+      return res.status(400).json({ message: "Quân đội đã ở lãnh thổ này" });
+    }
+    if (army.movementStatus === "moving") {
+      return res.status(400).json({ message: "Quân đội đang di chuyển, không thể ra lệnh mới" });
+    }
+
+    const [currentTerr] = await db.select().from(territories)
+      .where(eq(territories.id, army.currentTerritoryId ?? army.territoryId));
+
+    /* Ghi vị trí hiện tại vào trail trước khi di chuyển */
+    const pos = army.recentPositions ?? [];
+    if (currentTerr) {
+      pos.push({ x: currentTerr.x ?? 0, y: currentTerr.y ?? 0, tick: Date.now() });
+      if (pos.length > 10) pos.shift();
+    }
+
+    await db.update(militaryForces).set({
+      currentTerritoryId: army.currentTerritoryId ?? army.territoryId,
+      targetTerritoryId,
+      movementProgress:   0,
+      movementStatus:     "moving",
+      recentPositions:    pos,
+      updatedAt:          new Date(),
+    }).where(eq(militaryForces.id, armyId));
+
+    await db.insert(militaryMemories).values({
+      npcId:   (await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug)).limit(1).then(r => r[0]?.id ?? army.id)),
+      armyId:  army.id,
+      content: `Nhận lệnh hành quân đến ${targetTerr.name}. Trạng thái: MOVING.`,
+    });
+
+    return res.json({ message: `Quân đội ${army.armyName} bắt đầu hành quân đến ${targetTerr.name}`, status: "moving" });
+  } catch (e: any) {
+    return res.status(500).json({ message: e.message });
+  }
+});
+
+/* ════════════════════════════════════════
+   Phase 63A — POST /api/military/movement-tick/:worldSlug
+   Tiến trình di chuyển cho tất cả quân đang MOVING
+   Body: { progressDelta? } (default 0.2 per tick)
+════════════════════════════════════════ */
+router.post("/military/movement-tick/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const progressDelta: number = typeof req.body?.progressDelta === "number"
+      ? clamp(req.body.progressDelta, 0.01, 1)
+      : 0.2;
+
+    /* Load tất cả armies trong world đang MOVING */
+    const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
+    const terrIds = terrs.map(t => t.id);
+    if (terrIds.length === 0) return res.json({ updated: 0, arrived: 0 });
+
+    const govs = await db.select().from(npcGovernments)
+      .where(inArray(npcGovernments.territoryId, terrIds));
+    const govIds = govs.map(g => g.id);
+    if (govIds.length === 0) return res.json({ updated: 0, arrived: 0 });
+
+    const allArmies = await db.select().from(militaryForces)
+      .where(inArray(militaryForces.governmentId, govIds));
+    const movingArmies = allArmies.filter(a => a.movementStatus === "moving");
+
+    let updated = 0, arrived = 0;
+
+    for (const army of movingArmies) {
+      if (!army.targetTerritoryId) continue;
+
+      const newProgress = Math.min(1, army.movementProgress + progressDelta);
+      const terrMap = new Map(terrs.map(t => [t.id, t]));
+      const targetTerr = terrMap.get(army.targetTerritoryId);
+      if (!targetTerr) continue;
+
+      /* Cập nhật trail */
+      const pos = army.recentPositions ?? [];
+      if (targetTerr.x !== null && targetTerr.y !== null) {
+        const fromTerr = terrMap.get(army.currentTerritoryId ?? army.territoryId);
+        const fx = fromTerr?.x ?? 0, fy = fromTerr?.y ?? 0;
+        const tx = targetTerr.x ?? 0, ty = targetTerr.y ?? 0;
+        const curX = fx + (tx - fx) * army.movementProgress;
+        const curY = fy + (ty - fy) * army.movementProgress;
+        pos.push({ x: curX, y: curY, tick: Date.now() });
+        if (pos.length > 10) pos.shift();
+      }
+
+      if (newProgress >= 1) {
+        /* Kiểm tra xem lãnh thổ đích có địch không → SIEGING hay IDLE */
+        const defenderGov = govs.find(g => g.territoryId === army.targetTerritoryId);
+        const atkGov = govs.find(g => g.id === army.governmentId);
+        const atkTerr = atkGov ? terrMap.get(atkGov.territoryId) : null;
+        const defTerr = defenderGov ? terrMap.get(defenderGov.territoryId) : null;
+
+        const isSiege = !!(defenderGov && atkTerr?.ownerFactionId && defTerr?.ownerFactionId
+          && atkTerr.ownerFactionId !== defTerr.ownerFactionId);
+
+        await db.update(militaryForces).set({
+          currentTerritoryId: army.targetTerritoryId,
+          targetTerritoryId:  null,
+          movementProgress:   1,
+          movementStatus:     isSiege ? "sieging" : "arrived",
+          recentPositions:    pos,
+          updatedAt:          new Date(),
+        }).where(eq(militaryForces.id, army.id));
+        arrived++;
+      } else {
+        await db.update(militaryForces).set({
+          movementProgress: newProgress,
+          recentPositions:  pos,
+          updatedAt:        new Date(),
+        }).where(eq(militaryForces.id, army.id));
+      }
+      updated++;
+    }
+
+    /* Armies đã ARRIVED quá 1 tick → chuyển sang IDLE */
+    const arrivedArmies = allArmies.filter(a => a.movementStatus === "arrived");
+    for (const a of arrivedArmies) {
+      await db.update(militaryForces).set({
+        movementStatus:    "idle",
+        movementProgress:  0,
+        updatedAt:         new Date(),
+      }).where(eq(militaryForces.id, a.id));
+    }
+
+    broadcastUnity(worldSlug, {
+      type:    "army_movement_tick",
+      updated, arrived,
+      timestamp: Date.now(),
+    });
+
+    return res.json({ updated, arrived, message: `Cập nhật ${updated} quân đội, ${arrived} đã đến nơi` });
+  } catch (e: any) {
+    return res.status(500).json({ message: e.message });
+  }
+});
+
+/* ════════════════════════════════════════
+   Phase 63A — POST /api/military/movement-reset/:worldSlug
+   Reset trạng thái di chuyển (SIEGING → IDLE sau khi chiến đấu xong)
+   Body: { armyId }
+════════════════════════════════════════ */
+router.post("/military/movement-reset/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { armyId } = req.body as { armyId: string };
+    if (!armyId) return res.status(400).json({ message: "Thiếu armyId" });
+
+    await db.update(militaryForces).set({
+      movementStatus:    "idle",
+      targetTerritoryId: null,
+      movementProgress:  0,
+      updatedAt:         new Date(),
+    }).where(eq(militaryForces.id, armyId));
+
+    return res.json({ message: "Đã reset trạng thái di chuyển về IDLE" });
+  } catch (e: any) {
+    return res.status(500).json({ message: e.message });
+  }
+});
+
 export default router;

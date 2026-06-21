@@ -562,22 +562,32 @@ router.get("/unity/map-state/:worldSlug", async (req, res) => {
       const govIds = govRows.map(g => g.id);
       if (govIds.length > 0) {
         const armies = await db.select({
-          id:            militaryForces.id,
-          armyName:      militaryForces.armyName,
-          territoryId:   militaryForces.territoryId,
-          totalSoldiers: militaryForces.totalSoldiers,
-          militaryPower: militaryForces.militaryPower,
-          morale:        militaryForces.morale,
-          supplyLevel:   militaryForces.supplyLevel,
+          id:                 militaryForces.id,
+          armyName:           militaryForces.armyName,
+          territoryId:        militaryForces.territoryId,
+          currentTerritoryId: militaryForces.currentTerritoryId,
+          targetTerritoryId:  militaryForces.targetTerritoryId,
+          movementProgress:   militaryForces.movementProgress,
+          movementStatus:     militaryForces.movementStatus,
+          recentPositions:    militaryForces.recentPositions,
+          totalSoldiers:      militaryForces.totalSoldiers,
+          militaryPower:      militaryForces.militaryPower,
+          morale:             militaryForces.morale,
+          supplyLevel:        militaryForces.supplyLevel,
         }).from(militaryForces).where(inArray(militaryForces.governmentId, govIds));
         armyData = armies.map(a => ({
-          id:         a.id,
-          name:       a.armyName,
-          territoryId: a.territoryId ?? "",
-          soldiers:   a.totalSoldiers,
-          power:      a.militaryPower,
-          morale:     a.morale,
-          supply:     a.supplyLevel,
+          id:                 a.id,
+          name:               a.armyName,
+          territoryId:        a.territoryId ?? "",
+          currentTerritoryId: a.currentTerritoryId ?? a.territoryId ?? "",
+          targetTerritoryId:  a.targetTerritoryId ?? null,
+          movementProgress:   a.movementProgress ?? 0,
+          movementStatus:     (a.movementStatus ?? "idle") as string,
+          recentPositions:    (a.recentPositions ?? []) as { x: number; y: number; tick: number }[],
+          soldiers:           a.totalSoldiers,
+          power:              a.militaryPower,
+          morale:             a.morale,
+          supply:             a.supplyLevel,
         }));
       }
     }

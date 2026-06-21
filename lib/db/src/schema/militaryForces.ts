@@ -1,7 +1,13 @@
-import { pgTable, uuid, varchar, integer, real, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, real, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { npcGovernments } from "./npcGovernment";
 import { territories } from "./territories";
 import { npcCores } from "./npcCore";
+
+/* Phase 63A — recentPositions shape */
+export type ArmyPosition = { x: number; y: number; tick: number };
+
+/* Phase 63A — state machine */
+export type ArmyMovementStatus = "idle" | "moving" | "arrived" | "sieging";
 
 export const militaryForces = pgTable("military_forces", {
   id:              uuid("id").primaryKey().defaultRandom(),
@@ -13,6 +19,14 @@ export const militaryForces = pgTable("military_forces", {
   trainingLevel:   real("training_level").notNull().default(1),
   supplyLevel:     real("supply_level").notNull().default(100),
   militaryPower:   real("military_power").notNull().default(0),
+
+  /* ── Phase 63A: Logical Movement ── */
+  currentTerritoryId: uuid("current_territory_id").references(() => territories.id, { onDelete: "set null" }),
+  targetTerritoryId:  uuid("target_territory_id").references(() => territories.id, { onDelete: "set null" }),
+  movementProgress:   real("movement_progress").notNull().default(0),
+  movementStatus:     varchar("movement_status", { length: 16 }).notNull().default("idle"),
+  recentPositions:    jsonb("recent_positions").$type<ArmyPosition[]>().default([]),
+
   createdAt:       timestamp("created_at").defaultNow().notNull(),
   updatedAt:       timestamp("updated_at").defaultNow().notNull(),
 });
