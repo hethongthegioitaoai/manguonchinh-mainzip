@@ -18,3 +18,9 @@ id = "vLDySqWqX6tHPjqZ1oKhS"
 uri = "file://scripts/output/story-hai-người-yêu-nhau-2026-06-16.txt"
 type = "text"
 title = "Story: Hai người yêu nhau → Họ cưới nhau (3 kịch bản)"
+
+[[outputs]]
+id = "3C2NrOFMBYhvSu7a71PIh"
+uri = "file://TRADE_ROUTE_REPORT.md"
+type = "text"
+title = "TRADE_ROUTE_REPORT.md"

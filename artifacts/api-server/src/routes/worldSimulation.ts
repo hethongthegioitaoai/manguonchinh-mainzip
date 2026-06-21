@@ -11,6 +11,7 @@ import {
 import type { WorldSnapshotData, WorldSnapshotAggregates } from "@workspace/db/schema";
 import { eq, and, desc, lt, sql, inArray, asc, lte, gte, or, count } from "drizzle-orm";
 import { applyGovernmentPolicies } from "./npcGovernmentPolicy.js";
+import { tickTradeRoutes } from "./tradeRoutes.js";
 import { tickNpcWorld } from "./npcCore.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { emitEventSync, EVENT } from "../lib/eventBus.js";
@@ -287,6 +288,9 @@ Viết 1 câu tiếng Việt mô tả nhịp sống thường ngày của thế 
 
     /* ─── Apply government policy effects ─── */
     try { await applyGovernmentPolicies(worldSlug); } catch {}
+
+    /* ─── Trade Route tick ─── */
+    try { await tickTradeRoutes(worldSlug, newTick); } catch {}
 
     /* ─── NPC heartbeat (opt-in via ENABLE_NPC_HEARTBEAT=true) ─── */
     if (process.env.ENABLE_NPC_HEARTBEAT === "true") {

@@ -73,6 +73,7 @@ import NPCSimulationPage from "@/pages/NPCSimulationPage";
 import NPCPopulationPage from "@/pages/NPCPopulationPage";
 import NPCFactionPage from "@/pages/NPCFactionPage";
 import TerritoryPage from "@/pages/TerritoryPage";
+import TradeRoutePage from "@/pages/TradeRoutePage";
 import NpcGovernmentPage from "@/pages/NpcGovernmentPage";
 import NpcElectionPage from "@/pages/NpcElectionPage";
 import CaravanPage from "@/pages/CaravanPage";
@@ -176,6 +177,7 @@ function Router() {
       <Route path="/npc-population" component={NPCPopulationPage} />
       <Route path="/npc-factions" component={NPCFactionPage} />
       <Route path="/territories" component={TerritoryPage} />
+      <Route path="/trade-routes" component={TradeRoutePage} />
       <Route path="/npc-government" component={NpcGovernmentPage} />
       <Route path="/npc-elections" component={NpcElectionPage} />
       <Route path="/caravan" component={CaravanPage} />
