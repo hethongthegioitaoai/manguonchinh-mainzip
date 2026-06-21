@@ -7,6 +7,25 @@ import { isAuthenticated, getAuthUser } from "../auth/replitAuth.js";
 
 const router = Router();
 
+/* GET /api/auth/me — returns current authenticated user (alias of /auth/user) */
+router.get("/auth/me", isAuthenticated, async (req: any, res) => {
+  try {
+    const user = await getAuthUser(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({
+      id:              user.id,
+      email:           user.email,
+      username:        user.username,
+      firstName:       user.firstName,
+      lastName:        user.lastName,
+      profileImageUrl: user.profileImageUrl,
+      emailVerified:   user.emailVerified,
+    });
+  } catch {
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
 /* GET /api/auth/user */
 router.get("/auth/user", isAuthenticated, async (req: any, res) => {
   try {

@@ -4,6 +4,14 @@ import { pool } from "@workspace/db";
 const router: IRouter = Router();
 const startedAt = Date.now();
 
+router.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    uptime:    Math.floor((Date.now() - startedAt) / 1000),
+    timestamp: Date.now(),
+  });
+});
+
 router.get("/healthz", async (_req, res) => {
   const uptimeSeconds = Math.floor((Date.now() - startedAt) / 1000);
 

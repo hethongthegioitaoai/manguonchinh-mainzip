@@ -7,6 +7,25 @@ import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const router = Router();
+
+/* GET /api/worlds — public list of all worlds */
+router.get("/worlds", async (_req, res) => {
+  try {
+    const worlds = await db
+      .select({
+        slug:  customWorlds.slug,
+        name:  customWorlds.name,
+        genre: customWorlds.genre,
+      })
+      .from(customWorlds)
+      .orderBy(desc(customWorlds.createdAt));
+    res.json(worlds);
+  } catch (err) {
+    console.error("[worlds] list error:", err);
+    res.status(500).json({ error: "Failed to fetch worlds" });
+  }
+});
+
 const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const GENRES = ["tu_tien", "cyberpunk", "fantasy", "horror", "scifi", "wasteland", "steampunk", "xianxia"] as const;
