@@ -23,8 +23,10 @@ import { db } from "@workspace/db";
 import { worldEventLog, worldSimState, worldStreamState } from "@workspace/db/schema";
 import { eq, gt, and, asc } from "drizzle-orm";
 import { isAuthenticated } from "../auth/replitAuth.js";
+import { validateWorldSlug } from "../middleware/validateWorldSlug.js";
 
 const router = Router();
+router.param("worldSlug", validateWorldSlug);
 
 // ─── Delta Event Format ───────────────────────────────────────────────────────
 

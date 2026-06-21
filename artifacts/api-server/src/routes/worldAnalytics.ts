@@ -6,8 +6,10 @@ import {
   worldNpcEvents, worldStatSnapshots, worldChronicles,
 } from "@workspace/db/schema";
 import { eq, sql, desc, and, or, count, sum, avg } from "drizzle-orm";
+import { validateWorldSlug } from "../middleware/validateWorldSlug.js";
 
 const router = Router();
+router.param("worldSlug", validateWorldSlug);
 
 /* ══════════════════════════════════════════════
    HELPERS

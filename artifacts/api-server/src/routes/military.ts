@@ -12,8 +12,10 @@ import {
 import { eq, inArray, desc, sql } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
 import { emitEvent, emitEventSync, EVENT } from "../lib/eventBus.js";
+import { validateWorldSlug } from "../middleware/validateWorldSlug.js";
 
 const router = Router();
+router.param("worldSlug", validateWorldSlug);
 const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }

@@ -15,8 +15,10 @@ import { tickTradeRoutes } from "./tradeRoutes.js";
 import { tickNpcWorld } from "./npcCore.js";
 import { GoogleGenAI } from "@google/genai";
 import { emitEventSync, EVENT } from "../lib/eventBus.js";
+import { validateWorldSlug } from "../middleware/validateWorldSlug.js";
 
 const router = Router();
+router.param("worldSlug", validateWorldSlug);
 const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 async function geminiText(prompt: string): Promise<string> {
