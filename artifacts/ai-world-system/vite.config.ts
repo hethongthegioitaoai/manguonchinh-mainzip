@@ -49,19 +49,19 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    hmr: {
+      path: "/__vite_hmr",
+    },
     proxy: {
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
         secure: false,
+        ws: true,
+        rewriteWsOrigin: true,
         headers: {
           "X-Forwarded-Proto": "https",
         },
-      },
-      "/ws": {
-        target: "ws://localhost:8080",
-        ws: true,
-        changeOrigin: true,
       },
     },
   },

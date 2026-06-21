@@ -11,7 +11,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, inArray, desc, sql } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { broadcastUnity } from "../lib/unityWs.js";
+import { emitEvent, emitEventSync, EVENT } from "../lib/eventBus.js";
 
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
@@ -622,22 +622,13 @@ router.post("/military/attack/:worldSlug", isAuthenticated, async (req, res) => 
       },
     });
 
-    /* ─── Unity broadcast ─── */
-    try {
-      broadcastUnity(worldSlug, {
-        type:              "territory_captured",
-        attackerName:      atkName,
-        defenderName:      defName,
-        territoryId:       targetTerritoryId,
-        territoryName:     targetTerr.name,
-        attackerWon,
-        refugeeCount:      Math.round(refugees),
-        attackerSoldiers:  soldA,
-        defenderSoldiers:  soldB,
-        combatTicks,
-        timestamp:         Date.now(),
-      });
-    } catch {}
+    /* ─── Event Bus broadcast ─── */
+    await emitEvent(worldSlug, 0, EVENT.TERRITORY_CAPTURE, {
+      territoryId: targetTerritoryId, territoryName: targetTerr.name,
+      attackerName: atkName, defenderName: defName, attackerWon,
+      refugeeCount: Math.round(refugees), attackerSoldiers: soldA,
+      defenderSoldiers: soldB, combatTicks,
+    });
 
     return res.json({
       attackerWon,
@@ -798,11 +789,7 @@ router.post("/military/movement-tick/:worldSlug", isAuthenticated, async (req, r
       }).where(eq(militaryForces.id, a.id));
     }
 
-    broadcastUnity(worldSlug, {
-      type:    "army_movement_tick",
-      updated, arrived,
-      timestamp: Date.now(),
-    });
+    emitEventSync(worldSlug, 0, EVENT.ARMY_MOVE, { updated, arrived });
 
     return res.json({ updated, arrived, message: `Cập nhật ${updated} quân đội, ${arrived} đã đến nơi` });
   } catch (e: any) {

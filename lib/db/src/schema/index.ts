@@ -76,3 +76,4 @@ export * from "./playerAgent";
 export * from "./worldMap";
 export * from "./worldHistory";
 export * from "./worldSnapshots";
+export * from "./worldEventLog";

@@ -12,7 +12,7 @@ import { eq, and, desc, lt, sql, inArray, asc, lte } from "drizzle-orm";
 import { applyGovernmentPolicies } from "./npcGovernmentPolicy.js";
 import { tickNpcWorld } from "./npcCore.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { broadcastUnity } from "../lib/unityWs.js";
+import { emitEventSync, EVENT } from "../lib/eventBus.js";
 
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -315,13 +315,10 @@ Viết 1 câu tiếng Việt mô tả nhịp sống thường ngày của thế 
             description: `Dân số giảm xuống ${terr.population}, an ninh ${terr.security} — lãnh thổ bỏ hoang thành phế tích.`,
             actors:      { territories: [terr.id] },
           });
-          try {
-            broadcastUnity(worldSlug, {
-              type: "territory_collapse", territoryId: terr.id,
-              territoryName: terr.name, population: terr.population, security: terr.security,
-              timestamp: Date.now(),
-            });
-          } catch {}
+          emitEventSync(worldSlug, newTick, EVENT.TERRITORY_COLLAPSE, {
+            territoryId: terr.id, territoryName: terr.name,
+            population: terr.population, security: terr.security,
+          });
         }
 
         /* Recolonization: ruins → active when crowded neighbor pushes settlers (15% chance/tick) */
@@ -357,13 +354,10 @@ Viết 1 câu tiếng Việt mô tả nhịp sống thường ngày của thế 
                 description: `${settlers} dân định cư từ ${overcrowded.name} đến khai phá phế tích ${terr.name}, thành lập khu định cư mới.`,
                 actors:      { territories: [terr.id, overcrowded.id] },
               });
-              try {
-                broadcastUnity(worldSlug, {
-                  type: "recolonization", territoryId: terr.id,
-                  territoryName: terr.name, settlers,
-                  fromTerritory: overcrowded.name, timestamp: Date.now(),
-                });
-              } catch {}
+              emitEventSync(worldSlug, newTick, EVENT.TERRITORY_RECOLONIZED, {
+                territoryId: terr.id, territoryName: terr.name,
+                settlers, fromTerritoryId: overcrowded.id, fromTerritoryName: overcrowded.name,
+              });
             }
           }
         }

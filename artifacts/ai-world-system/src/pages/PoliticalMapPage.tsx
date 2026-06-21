@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useWorldEvents } from "@/hooks/useWorldEvents";
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface Territory {
@@ -225,7 +226,7 @@ export default function PoliticalMapPage() {
   const { data: mapState, refetch, isLoading } = useQuery<MapState>({
     queryKey: ["map-state", worldSlug],
     queryFn:  () => fetchMapState(worldSlug),
-    refetchInterval: autoRefresh && !snapshotMode ? 8000 : false,
+    refetchInterval: autoRefresh && !snapshotMode ? 30000 : false,
     staleTime: 5000,
   });
 
@@ -258,6 +259,23 @@ export default function PoliticalMapPage() {
     enabled:  detailPanelId !== null && !snapshotMode,
     staleTime: 10000,
   });
+
+  /* Phase 65C — WebSocket realtime subscription (after all queries so refetch is defined) */
+  const { latestEvent, connected: wsConnected, stats: wsStats } = useWorldEvents(
+    autoRefresh && !snapshotMode ? worldSlug : null
+  );
+
+  useEffect(() => {
+    if (!latestEvent) return;
+    const REFETCH_EVENTS = new Set([
+      "territory_capture", "territory_collapse", "territory_recolonized",
+      "army_move", "army_arrived", "army_siege_started", "army_siege_ended",
+      "npc_migrate", "faction_leader_changed", "world_tick",
+    ]);
+    if (REFETCH_EVENTS.has(latestEvent.event)) {
+      refetch();
+    }
+  }, [latestEvent, refetch]);
 
   /* ── Event inspector (Phase 59) ── */
   const { data: eventDetail } = useQuery<EnrichedEvent>({
@@ -430,6 +448,20 @@ export default function PoliticalMapPage() {
             title={`NPC: ${npcs.length} người`}>
             👥 NPC{npcs.length > 0 ? ` (${npcs.length})` : ""}
           </button>
+
+          {/* Phase 65C — WS connection status */}
+          <span
+            title={wsConnected
+              ? `WebSocket kết nối — ${wsStats.total} sự kiện nhận, ${wsStats.perSec}/s`
+              : "WebSocket ngắt — đang thử lại…"}
+            className={`px-2 py-1 rounded border text-xs flex items-center gap-1 ${
+              wsConnected
+                ? "border-green-700 text-green-400 bg-green-950/20"
+                : "border-yellow-800 text-yellow-600"
+            }`}>
+            <span className={`w-1.5 h-1.5 rounded-full inline-block ${wsConnected ? "bg-green-400 animate-pulse" : "bg-yellow-600"}`}/>
+            {wsConnected ? `WS${wsStats.total > 0 ? ` ·${wsStats.total}` : ""}` : "WS off"}
+          </span>
 
           {/* Live / snapshot toggle */}
           {snapshotMode ? (

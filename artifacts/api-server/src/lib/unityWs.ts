@@ -1,7 +1,19 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 
-// ─── Unity-ready event types ────────────────────────────────────────────────
+// ─── Canonical event format (Phase 65 — Unity-ready) ─────────────────────────
+// Format used by all broadcasts and the persistent event log.
+// Unity, React, and any other client all receive the same structure.
+
+export interface WorldEvent {
+  event:     string;                   // e.g. "territory_capture"
+  worldSlug: string;
+  tick:      number;
+  ts:        number;                   // Unix ms
+  payload:   Record<string, unknown>;
+}
+
+// ─── Legacy event types (kept for backward-compat call sites) ─────────────────
 
 export interface BattleEvent {
   type: "battle";
@@ -15,17 +27,15 @@ export interface BattleEvent {
   goldReward: number;
   territoryChanged: boolean;
   timestamp: string;
-  // Player Agent fields (nếu có player tham chiến)
   playerId?: string;
   playerWon?: boolean;
   levelUp?: boolean;
-  // Territory war fields (nếu battle liên quan lãnh thổ)
   territoryId?: string;
   territoryName?: string;
   captured?: boolean;
 }
 
-export type UnityEvent =
+export type LegacyUnityEvent =
   | { type: "npc_move";   worldSlug: string; npcId: string; name: string; fromPos: Pos | null; toPos: Pos; action: string }
   | BattleEvent
   | { type: "election";   worldSlug: string; govId: string; territory: string; electionType: string; winner: string }
@@ -36,15 +46,17 @@ export type UnityEvent =
   | { type: "war_end";    worldSlug: string; warId: string; winner: string }
   | { type: "world_tick"; worldSlug: string; ts: number };
 
+/** @deprecated use WorldEvent + broadcastEvent() */
+export type UnityEvent = LegacyUnityEvent;
+
 export interface Pos { x: number; y: number }
 
-// ─── Per-world subscriber map ─────────────────────────────────────────────
+// ─── Per-world subscriber map ─────────────────────────────────────────────────
 
-// worldSlug → Set<WebSocket>
 const worldSubs = new Map<string, Set<WebSocket>>();
 
 export function setupUnityWebSocket(server: Server) {
-  const wss = new WebSocketServer({ server, path: "/ws/unity" });
+  const wss = new WebSocketServer({ server, path: "/api/ws/unity" });
 
   wss.on("connection", (ws) => {
     let subscribedWorlds: Set<string> = new Set();
@@ -60,7 +72,6 @@ export function setupUnityWebSocket(server: Server) {
       try {
         const msg = JSON.parse(raw.toString());
 
-        // { type: "subscribe", worlds: ["tu-tien", "cyberpunk"] }
         if (msg.type === "subscribe" && Array.isArray(msg.worlds)) {
           for (const slug of msg.worlds as string[]) {
             if (!worldSubs.has(slug)) worldSubs.set(slug, new Set());
@@ -70,7 +81,6 @@ export function setupUnityWebSocket(server: Server) {
           ws.send(JSON.stringify({ type: "subscribed", worlds: [...subscribedWorlds] }));
         }
 
-        // { type: "unsubscribe", worlds: ["tu-tien"] }
         if (msg.type === "unsubscribe" && Array.isArray(msg.worlds)) {
           for (const slug of msg.worlds as string[]) {
             worldSubs.get(slug)?.delete(ws);
@@ -78,7 +88,6 @@ export function setupUnityWebSocket(server: Server) {
           }
         }
 
-        // { type: "ping" }
         if (msg.type === "ping") ws.send(JSON.stringify({ type: "pong" }));
       } catch {}
     });
@@ -88,16 +97,35 @@ export function setupUnityWebSocket(server: Server) {
   });
 }
 
-/** Broadcast a Unity event to all clients subscribed to the world. */
-export function broadcastUnity(event: UnityEvent) {
-  const subs = worldSubs.get(event.worldSlug);
+/**
+ * Broadcast a canonical WorldEvent to all WS clients subscribed to the world.
+ * This is the primary broadcast function — use this for all new code.
+ */
+export function broadcastEvent(evt: WorldEvent): void {
+  const subs = worldSubs.get(evt.worldSlug);
   if (!subs || subs.size === 0) return;
-  const payload = JSON.stringify(event);
+  const payload = JSON.stringify(evt);
   for (const ws of subs) {
     if (ws.readyState === WebSocket.OPEN) {
       try { ws.send(payload); } catch {}
     }
   }
+}
+
+/**
+ * @deprecated Legacy broadcast — wraps LegacyUnityEvent into canonical format.
+ * Kept for backward-compat call sites that still use old { type } format.
+ */
+export function broadcastUnity(event: LegacyUnityEvent): void {
+  const slug = event.worldSlug;
+  const canonical: WorldEvent = {
+    event:     event.type,
+    worldSlug: slug,
+    tick:      0,
+    ts:        Date.now(),
+    payload:   event as unknown as Record<string, unknown>,
+  };
+  broadcastEvent(canonical);
 }
 
 export function unitySubscriberCount(worldSlug: string): number {

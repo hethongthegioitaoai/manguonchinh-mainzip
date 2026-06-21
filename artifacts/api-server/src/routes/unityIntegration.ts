@@ -7,7 +7,7 @@ import {
   npcBirths, elections, diplomaticMemories,
   worldEvents,
 } from "@workspace/db/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, asc, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth/replitAuth.js";
 
 const router = Router();
@@ -660,6 +660,84 @@ router.get("/unity/map-state/:worldSlug", async (req, res) => {
   } catch (err) {
     console.error("[Unity] map-state error:", err);
     return res.status(500).json({ error: "Failed to fetch map state" });
+  }
+});
+
+// ─── GET /api/unity/event-stream/:worldSlug ──────────────────────────────────
+// Phase 65B — Replay-safe event log endpoint
+// Returns events from world_event_log since a given tick or timestamp.
+// Used for: initial load catch-up, replay, Unity sync on reconnect.
+//
+// Query params:
+//   sinceTick  (number, default 0)   — return events with tick >= sinceTick
+//   sinceTs    (number, ms, optional) — return events with ts >= sinceTs (overrides sinceTick if set)
+//   limit      (number, default 200, max 500)
+//   event      (string, optional)    — filter to specific event type
+
+router.get("/unity/event-stream/:worldSlug", async (req, res) => {
+  const { worldSlug } = req.params as Record<string, string>;
+  try {
+    const { worldEventLog: evtLog } = await import("@workspace/db/schema");
+    const { and: _and, gte, lte: _lte } = await import("drizzle-orm");
+
+    const sinceTick  = Number(req.query.sinceTick ?? 0);
+    const sinceTs    = req.query.sinceTs ? Number(req.query.sinceTs) : null;
+    const limit      = Math.min(Number(req.query.limit ?? 200), 500);
+    const eventFilter = req.query.event as string | undefined;
+
+    const conditions = [
+      eq(evtLog.worldSlug, worldSlug),
+      sinceTs !== null
+        ? gte(evtLog.ts, sinceTs)
+        : gte(evtLog.tick, sinceTick),
+    ];
+    if (eventFilter) conditions.push(eq(evtLog.event, eventFilter));
+
+    const rows = await db.select({
+      id:        evtLog.id,
+      worldSlug: evtLog.worldSlug,
+      tick:      evtLog.tick,
+      event:     evtLog.event,
+      payload:   evtLog.payload,
+      ts:        evtLog.ts,
+    }).from(evtLog)
+      .where(_and(...conditions))
+      .orderBy(asc(evtLog.ts))
+      .limit(limit);
+
+    return res.json({
+      worldSlug,
+      count: rows.length,
+      sinceTick,
+      events: rows,
+    });
+  } catch (err) {
+    console.error("[Unity] event-stream error:", err);
+    return res.status(500).json({ error: "Failed to fetch event stream" });
+  }
+});
+
+// ─── GET /api/unity/event-stream/:worldSlug/latest ───────────────────────────
+// Returns the last N events — useful for initial WS catch-up on page load.
+
+router.get("/unity/event-stream/:worldSlug/latest", async (req, res) => {
+  const { worldSlug } = req.params as Record<string, string>;
+  try {
+    const { worldEventLog: evtLog } = await import("@workspace/db/schema");
+    const limit = Math.min(Number(req.query.limit ?? 50), 200);
+
+    const rows = await db.select({
+      id: evtLog.id, worldSlug: evtLog.worldSlug, tick: evtLog.tick,
+      event: evtLog.event, payload: evtLog.payload, ts: evtLog.ts,
+    }).from(evtLog)
+      .where(eq(evtLog.worldSlug, worldSlug))
+      .orderBy(desc(evtLog.ts))
+      .limit(limit);
+
+    return res.json({ worldSlug, count: rows.length, events: rows.reverse() });
+  } catch (err) {
+    console.error("[Unity] event-stream/latest error:", err);
+    return res.status(500).json({ error: "Failed to fetch latest events" });
   }
 });
 

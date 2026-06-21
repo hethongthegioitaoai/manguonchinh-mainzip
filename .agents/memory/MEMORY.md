@@ -4,3 +4,4 @@
 - [Phases 41-45 pattern](phases-41-45.md) — ROADMAP TẠO THẾ GIỚI ẢO xong: characters dùng worldId không phải currentWorld; COSMIC_TIER_NAMES phải khai báo local trong route (không import từ schema)
 - [Phases 46-51 roadmap](phases-46-50.md) — Phase 51 NGOẠI GIAO NPC done; auth.ts thiếu /register + /login routes → "Không thể kết nối" — đã fix; diplomacy.ts là world-level (cũ), npcDiplomacy.ts là NPC-gov level (mới)
 - [Route path prefix rule](route-path-prefix.md) — app.use("/api", router) trong app.ts: routes BÊN TRONG router dùng /military/... KHÔNG phải /api/military/... — nếu dùng /api/ prefix sẽ bị 404 vì Express strip /api rồi mới match
+- [Vite WS proxy pattern](vite-ws-proxy.md) — WebSocket server phải dùng path `/api/ws/unity` (không phải `/ws/unity`); Vite proxy `/api` cần `ws:true`+`rewriteWsOrigin:true`; HMR phải set `path:"/__vite_hmr"` để tránh conflict; hooks dùng state declarations TRƯỚC useQuery thì `refetch` chưa tồn tại → crash
