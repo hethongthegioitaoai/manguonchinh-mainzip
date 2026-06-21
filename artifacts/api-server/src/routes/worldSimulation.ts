@@ -49,126 +49,116 @@ const EVENT_POOL = [
 function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
 function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
 
+/* ─── Snapshot data builder (Phase 7.1B) — used by saveWorldSnapshot + synthetic fallback ─── */
+async function buildSnapshotData(worldSlug: string, tick: number): Promise<WorldSnapshotData> {
+  const terrs = await db
+    .select({
+      id:             territories.id,
+      name:           territories.name,
+      type:           territories.type,
+      x:              territories.x,
+      y:              territories.y,
+      terrain:        territories.terrain,
+      status:         territories.status,
+      population:     territories.population,
+      prosperity:     territories.prosperity,
+      security:       territories.security,
+      ownerFactionId: territories.ownerFactionId,
+      factionName:    npcFactions.name,
+    })
+    .from(territories)
+    .leftJoin(npcFactions, eq(territories.ownerFactionId, npcFactions.id))
+    .where(eq(territories.worldSlug, worldSlug));
+
+  const armies = await db
+    .select({
+      id:          militaryForces.id,
+      armyName:    militaryForces.armyName,
+      territoryId: militaryForces.territoryId,
+      soldiers:    militaryForces.totalSoldiers,
+      power:       militaryForces.militaryPower,
+      morale:      militaryForces.morale,
+      supply:      militaryForces.supplyLevel,
+    })
+    .from(militaryForces)
+    .innerJoin(territories, eq(militaryForces.territoryId, territories.id))
+    .where(eq(territories.worldSlug, worldSlug));
+
+  const factionRows = await db
+    .select()
+    .from(npcFactions)
+    .where(eq(npcFactions.worldSlug, worldSlug));
+
+  const terrFactionCount = new Map<string, number>();
+  for (const t of terrs) {
+    if (t.ownerFactionId) {
+      terrFactionCount.set(t.ownerFactionId, (terrFactionCount.get(t.ownerFactionId) ?? 0) + 1);
+    }
+  }
+
+  const snapshotTerrs = terrs.map(t => ({
+    id:               t.id,
+    name:             t.name,
+    type:             t.type,
+    x:                t.x ?? 50,
+    y:                t.y ?? 50,
+    terrain:          t.terrain ?? "plains",
+    status:           t.status ?? "active",
+    population:       t.population ?? 0,
+    prosperity:       t.prosperity ?? 50,
+    security:         t.security ?? 50,
+    ownerFactionId:   t.ownerFactionId ?? null,
+    ownerFactionName: t.factionName ?? null,
+    militaryPower:    armies.find(a => a.territoryId === t.id)?.power ?? 0,
+    foodSupply:       Math.round(clamp((t.prosperity ?? 50) * 0.6 + (t.security ?? 50) * 0.4, 0, 100)),
+  }));
+
+  const activeTerrs = snapshotTerrs.filter(t => t.status === "active");
+  const ruinsTerrs  = snapshotTerrs.filter(t => t.status === "ruins");
+  const avg = (arr: number[]) => arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+
+  const aggregates: WorldSnapshotAggregates = {
+    populationTotal:    activeTerrs.reduce((s, t) => s + t.population, 0),
+    activeCount:        activeTerrs.length,
+    ruinsCount:         ruinsTerrs.length,
+    factionCount:       factionRows.length,
+    armyCount:          armies.reduce((s, a) => s + a.soldiers, 0),
+    avgFoodSupply:      avg(activeTerrs.map(t => t.foodSupply)),
+    avgProsperity:      avg(activeTerrs.map(t => t.prosperity)),
+    avgSecurity:        avg(activeTerrs.map(t => t.security)),
+    totalMilitaryPower: armies.reduce((s, a) => s + (a.power ?? 0), 0),
+  };
+
+  return {
+    tick,
+    territories: snapshotTerrs,
+    factions: factionRows.map(f => ({
+      id:             f.id,
+      name:           f.name,
+      type:           f.type,
+      influence:      f.influence ?? 0,
+      treasury:       f.treasury ?? 0,
+      militaryPower:  f.militaryPower ?? 0,
+      territoryCount: terrFactionCount.get(f.id) ?? 0,
+    })),
+    armies: armies.map(a => ({
+      id:          a.id,
+      name:        a.armyName,
+      territoryId: a.territoryId,
+      soldiers:    a.soldiers,
+      power:       a.power,
+      morale:      a.morale,
+      supply:      a.supply,
+    })),
+    aggregates,
+  };
+}
+
 /* ─── Snapshot builder (Phase 60) ─── */
 async function saveWorldSnapshot(worldSlug: string, tick: number): Promise<void> {
   try {
-    const terrs = await db
-      .select({
-        id:             territories.id,
-        name:           territories.name,
-        type:           territories.type,
-        x:              territories.x,
-        y:              territories.y,
-        terrain:        territories.terrain,
-        status:         territories.status,
-        population:     territories.population,
-        prosperity:     territories.prosperity,
-        security:       territories.security,
-        ownerFactionId: territories.ownerFactionId,
-        factionName:    npcFactions.name,
-      })
-      .from(territories)
-      .leftJoin(npcFactions, eq(territories.ownerFactionId, npcFactions.id))
-      .where(eq(territories.worldSlug, worldSlug));
-
-    const govs = await db
-      .select({
-        territoryId:  npcGovernments.territoryId,
-        treasury:     npcGovernments.treasury,
-      })
-      .from(npcGovernments)
-      .innerJoin(territories, eq(npcGovernments.territoryId, territories.id))
-      .where(eq(territories.worldSlug, worldSlug));
-    const govMap = new Map(govs.map(g => [g.territoryId, g.treasury]));
-
-    const armies = await db
-      .select({
-        id:          militaryForces.id,
-        armyName:    militaryForces.armyName,
-        territoryId: militaryForces.territoryId,
-        soldiers:    militaryForces.totalSoldiers,
-        power:       militaryForces.militaryPower,
-        morale:      militaryForces.morale,
-        supply:      militaryForces.supplyLevel,
-      })
-      .from(militaryForces)
-      .innerJoin(territories, eq(militaryForces.territoryId, territories.id))
-      .where(eq(territories.worldSlug, worldSlug));
-
-    const factionRows = await db
-      .select()
-      .from(npcFactions)
-      .where(eq(npcFactions.worldSlug, worldSlug));
-
-    const terrFactionCount = new Map<string, number>();
-    for (const t of terrs) {
-      if (t.ownerFactionId) {
-        terrFactionCount.set(t.ownerFactionId, (terrFactionCount.get(t.ownerFactionId) ?? 0) + 1);
-      }
-    }
-
-    const snapshotTerrs = terrs.map(t => ({
-      id:               t.id,
-      name:             t.name,
-      type:             t.type,
-      x:                t.x ?? 50,
-      y:                t.y ?? 50,
-      terrain:          t.terrain ?? "plains",
-      status:           t.status ?? "active",
-      population:       t.population ?? 0,
-      prosperity:       t.prosperity ?? 50,
-      security:         t.security ?? 50,
-      ownerFactionId:   t.ownerFactionId ?? null,
-      ownerFactionName: t.factionName ?? null,
-      militaryPower:    armies.find(a => a.territoryId === t.id)?.power ?? 0,
-      foodSupply:       Math.round(clamp((t.prosperity ?? 50) * 0.6 + (t.security ?? 50) * 0.4, 0, 100)),
-    }));
-
-    const activeTerrs  = snapshotTerrs.filter(t => t.status === "active");
-    const ruinsTerrs   = snapshotTerrs.filter(t => t.status === "ruins");
-    const avg = (arr: number[]) => arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
-
-    const aggregates: WorldSnapshotAggregates = {
-      populationTotal:  activeTerrs.reduce((s, t) => s + t.population, 0),
-      activeCount:      activeTerrs.length,
-      ruinsCount:       ruinsTerrs.length,
-      factionCount:     factionRows.length,
-      armyCount:        armies.reduce((s, a) => s + a.soldiers, 0),
-      avgFoodSupply:    avg(activeTerrs.map(t => t.foodSupply)),
-      avgProsperity:    avg(activeTerrs.map(t => t.prosperity)),
-      avgSecurity:      avg(activeTerrs.map(t => t.security)),
-      totalMilitaryPower: armies.reduce((s, a) => s + (a.power ?? 0), 0),
-    };
-
-    const snapshotData: WorldSnapshotData = {
-      tick,
-      territories: snapshotTerrs,
-      factions: factionRows.map(f => ({
-        id:             f.id,
-        name:           f.name,
-        type:           f.type,
-        influence:      f.influence ?? 0,
-        treasury:       f.treasury ?? 0,
-        militaryPower:  f.militaryPower ?? 0,
-        territoryCount: terrFactionCount.get(f.id) ?? 0,
-      })),
-      armies: armies.map(a => ({
-        id:          a.id,
-        name:        a.armyName,
-        territoryId: a.territoryId,
-        soldiers:    a.soldiers,
-        power:       a.power,
-        morale:      a.morale,
-        supply:      a.supply,
-      })),
-      aggregates,
-    };
-
-    await db.insert(worldSnapshots).values({
-      worldSlug,
-      tick,
-      data: snapshotData,
-    });
+    const snapshotData = await buildSnapshotData(worldSlug, tick);
+    await db.insert(worldSnapshots).values({ worldSlug, tick, data: snapshotData });
   } catch (e) {
     console.error(`[Snapshot] Failed to save snapshot tick=${tick}:`, e);
   }
@@ -598,7 +588,11 @@ router.get("/simulation/snapshots/:worldSlug", async (req, res) => {
   } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
-/* ─── Phase 60: GET /api/simulation/snapshot/:worldSlug/:tick — get snapshot at or before tick ─── */
+/* ─── Phase 60 + 7.1B: GET /api/simulation/snapshot/:worldSlug/:tick
+     Returns persisted snapshot at or before tick.
+     If none exists, builds a synthetic snapshot from current live state
+     and returns HTTP 200 with { syntheticSnapshot: true } flag.
+     Replay page works from Tick 1 onward. ─── */
 router.get("/simulation/snapshot/:worldSlug/:tick", async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
@@ -612,8 +606,13 @@ router.get("/simulation/snapshot/:worldSlug/:tick", async (req, res) => {
       .orderBy(desc(worldSnapshots.tick))
       .limit(1);
 
-    if (!row) return res.status(404).json({ error: "No snapshot found at or before this tick" });
-    return res.json(row.data);
+    if (row) {
+      return res.json({ ...(row.data as object), syntheticSnapshot: false });
+    }
+
+    /* ── Fallback: build synthetic snapshot from current live state ── */
+    const synthetic = await buildSnapshotData(worldSlug, tick);
+    return res.json({ ...synthetic, syntheticSnapshot: true });
   } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
