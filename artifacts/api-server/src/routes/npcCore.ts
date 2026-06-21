@@ -13,6 +13,8 @@ import {
   marketOrders,
   territories,
   territoryLogs,
+  npcFactions,
+  npcFactionMembers,
 } from "@workspace/db/schema";
 import { eq, desc, and, or, gt, ne } from "drizzle-orm";
 
@@ -1750,6 +1752,104 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
       }
     }
 
+    // ── Faction System ──
+    // Phase 3: Tax Collection  →  treasury
+    // Phase 4: Leadership Check (NPC leader rời đi → bầu người mới)
+    // Phase 5: Army Building   →  militaryPower khi treasury dư
+    {
+      const factions = await db
+        .select()
+        .from(npcFactions)
+        .where(eq(npcFactions.worldSlug, worldSlug));
+
+      for (const faction of factions) {
+        // ── 3. Thu thuế từ mọi lãnh thổ thuộc faction ──
+        const ownedTerritories = await db
+          .select()
+          .from(territories)
+          .where(and(
+            eq(territories.worldSlug, worldSlug),
+            eq(territories.ownerFactionId, faction.id),
+          ));
+
+        let totalTax = 0;
+        for (const t of ownedTerritories) {
+          if ((t.status ?? "active") !== "active") continue; // lãnh thổ sụp đổ không đóng thuế
+          const pop = t.population ?? 0;
+          const pros = t.prosperity ?? 0;
+          const tax = Math.floor(pop * pros * 0.05);
+          if (tax > 0) {
+            totalTax += tax;
+            await db.insert(territoryLogs).values({
+              territoryId: t.id,
+              event: `Thu thuế cho ${faction.name}: ${pop} dân × prosperity ${pros} × 0.05 = ${tax} vàng`,
+            });
+          }
+        }
+
+        // ── 4. Kiểm tra lãnh đạo còn tồn tại không ──
+        let leaderNpcId = faction.leaderNpcId;
+        if (leaderNpcId) {
+          const [leader] = await db
+            .select({ id: npcCores.id, active: npcCores.active })
+            .from(npcCores)
+            .where(eq(npcCores.id, leaderNpcId));
+          if (!leader || leader.active !== 1) {
+            // Lãnh đạo không còn → bầu thành viên kỳ cựu nhất làm lãnh đạo mới
+            const [newLeaderMember] = await db
+              .select()
+              .from(npcFactionMembers)
+              .where(and(
+                eq(npcFactionMembers.factionId, faction.id),
+                ne(npcFactionMembers.npcId, leaderNpcId),
+              ))
+              .orderBy(npcFactionMembers.joinedAt)
+              .limit(1);
+
+            leaderNpcId = newLeaderMember?.npcId ?? null;
+            if (leaderNpcId) {
+              await db
+                .update(npcFactionMembers)
+                .set({ role: "leader" })
+                .where(eq(npcFactionMembers.npcId, leaderNpcId));
+            }
+          }
+        }
+
+        // ── 5. Nạp treasury + tuyển quân ──
+        const currentTreasury = (faction.treasury ?? 0) + totalTax;
+        let newMilitary = faction.militaryPower ?? 0;
+        let newInfluence = faction.influence ?? 0;
+        let recruitmentCost = 0;
+
+        if (currentTreasury > 5000) {
+          // Tuyển quân: tốn vàng, tăng military power
+          const recruit = rand(1, 5);
+          recruitmentCost = recruit * rand(40, 80);
+          newMilitary = clamp(newMilitary + recruit, 0, 9999);
+        }
+
+        // Influence tăng dựa trên prosperity trung bình + quân sự
+        const avgPros = ownedTerritories.length > 0
+          ? Math.round(ownedTerritories.reduce((s, t) => s + (t.prosperity ?? 0), 0) / ownedTerritories.length)
+          : 0;
+        if (avgPros > 50) newInfluence = clamp(newInfluence + 1, 0, 9999);
+
+        const finalTreasury = Math.max(0, currentTreasury - recruitmentCost);
+
+        await db
+          .update(npcFactions)
+          .set({
+            treasury:      finalTreasury,
+            militaryPower: newMilitary,
+            influence:     newInfluence,
+            leaderNpcId:   leaderNpcId,
+            updatedAt:     new Date(),
+          })
+          .where(eq(npcFactions.id, faction.id));
+      }
+    }
+
     return {
       message: `Đã tick ${logs.length} NPC`,
       ticked: logs.length,
@@ -1766,6 +1866,14 @@ router.post("/npc-core/tick/:worldSlug", isAuthenticated, async (req, res) => {
   const result = await tickNpcWorld(worldSlug);
   return res.json(result);
 });
+
+if (process.env.NODE_ENV !== "production") {
+  router.post("/npc-core/dev-tick/:worldSlug", async (req, res) => {
+    const { worldSlug } = req.params as Record<string, string>;
+    const result = await tickNpcWorld(worldSlug);
+    return res.json(result);
+  });
+}
 
 
 
@@ -1792,7 +1900,7 @@ if (process.env.NODE_ENV !== "production") {
     }
 
     // ── Đọc trạng thái cuối từ DB thật ──
-    const [territoriesData, npcsData, marketData] = await Promise.all([
+    const [territoriesData, npcsData, marketData, factionsData] = await Promise.all([
       db.select().from(territories).where(eq(territories.worldSlug, worldSlug)),
       db.select({
         id: npcCores.id,
@@ -1804,6 +1912,7 @@ if (process.env.NODE_ENV !== "production") {
         territoryId: npcCores.territoryId,
       }).from(npcCores).where(and(eq(npcCores.worldSlug, worldSlug), eq(npcCores.active, 1))),
       db.select().from(worldMarket).where(eq(worldMarket.worldSlug, worldSlug)),
+      db.select().from(npcFactions).where(eq(npcFactions.worldSlug, worldSlug)),
     ]);
 
     // ── Validate & collect anomalies ──
@@ -1841,6 +1950,16 @@ if (process.env.NODE_ENV !== "production") {
         anomalies.push(`[market:${m.itemName}] demand âm: ${m.totalDemand}`);
     }
 
+    // ── Faction validation ──
+    for (const f of factionsData) {
+      if ((f.treasury ?? 0) < 0)
+        anomalies.push(`[faction:${f.name}] treasury âm: ${f.treasury}`);
+      if ((f.militaryPower ?? 0) < 0)
+        anomalies.push(`[faction:${f.name}] militaryPower âm: ${f.militaryPower}`);
+      if ((f.influence ?? 0) < 0)
+        anomalies.push(`[faction:${f.name}] influence âm: ${f.influence}`);
+    }
+
     // ── Tổng hợp report ──
     const totalPopulation = territoriesData.reduce((s, t) => s + (t.population ?? 0), 0);
     const avgProsperity = territoriesData.length
@@ -1859,6 +1978,7 @@ if (process.env.NODE_ENV !== "production") {
         territoryCount: territoriesData.length,
         npcCount: npcsData.length,
         marketItemCount: marketData.length,
+        factionCount: factionsData.length,
       },
 
       territories: territoriesData.map((t) => ({
@@ -1867,6 +1987,15 @@ if (process.env.NODE_ENV !== "production") {
         population: t.population,
         prosperity: t.prosperity,
         security: t.security,
+        ownerFactionId: t.ownerFactionId,
+      })),
+
+      factions: factionsData.map((f) => ({
+        name: f.name,
+        treasury: f.treasury,
+        militaryPower: f.militaryPower,
+        influence: f.influence,
+        leaderNpcId: f.leaderNpcId,
       })),
 
       npcs: npcsData.map((n) => ({

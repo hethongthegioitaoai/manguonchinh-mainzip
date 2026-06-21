@@ -2,15 +2,17 @@ import { pgTable, uuid, varchar, integer, text, timestamp } from "drizzle-orm/pg
 import { npcCores } from "./npcCore";
 
 export const npcFactions = pgTable("npc_factions", {
-  id:           uuid("id").primaryKey().defaultRandom(),
-  worldSlug:    varchar("world_slug", { length: 64 }).notNull(),
-  name:         varchar("name", { length: 128 }).notNull(),
-  type:         varchar("type", { length: 32 }).notNull().default("merchant_guild"),
-  leaderNpcId:  uuid("leader_npc_id").references(() => npcCores.id, { onDelete: "set null" }),
-  treasury:     integer("treasury").notNull().default(0),
-  reputation:   integer("reputation").notNull().default(50),
-  createdAt:    timestamp("created_at").defaultNow(),
-  updatedAt:    timestamp("updated_at").defaultNow(),
+  id:             uuid("id").primaryKey().defaultRandom(),
+  worldSlug:      varchar("world_slug", { length: 64 }).notNull(),
+  name:           varchar("name", { length: 128 }).notNull(),
+  type:           varchar("type", { length: 32 }).notNull().default("merchant_guild"),
+  leaderNpcId:    uuid("leader_npc_id").references(() => npcCores.id, { onDelete: "set null" }),
+  treasury:       integer("treasury").notNull().default(0),
+  reputation:     integer("reputation").notNull().default(50),
+  influence:      integer("influence").notNull().default(0),
+  militaryPower:  integer("military_power").notNull().default(0),
+  createdAt:      timestamp("created_at").defaultNow(),
+  updatedAt:      timestamp("updated_at").defaultNow(),
 });
 
 export const npcFactionMembers = pgTable("npc_faction_members", {
