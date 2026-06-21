@@ -78,3 +78,4 @@ export * from "./worldHistory";
 export * from "./worldSnapshots";
 export * from "./worldEventLog";
 export * from "./tradeRoutes";
+export * from "./worldStreamState";

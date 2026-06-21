@@ -2,13 +2,12 @@
  * Unity Delta Stream
  *
  * Gửi delta events thay vì full world state.
- * Server giữ lastTickSent per-client (in-memory).
+ * Server giữ lastTickSent per-world trong DB (world_stream_state).
  * Unity chỉ nhận delta: { type, tick, entityId, changes }
  *
  * API:
  *   GET /api/unity/delta/:worldSlug
- *       ?lastTick=N          — explicit cursor (nếu không có clientId)
- *       ?clientId=xxx        — server tự nhớ lastTickSent cho client đó
+ *       ?lastTick=N          — explicit cursor override (bỏ qua DB cursor)
  *       ?limit=200           — max events trả về (default 200, max 1000)
  *
  *   GET /api/unity/delta/:worldSlug/snapshot-size
@@ -21,8 +20,8 @@
 
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { worldEventLog, worldSimState } from "@workspace/db/schema";
-import { eq, gt, and, asc, count } from "drizzle-orm";
+import { worldEventLog, worldSimState, worldStreamState } from "@workspace/db/schema";
+import { eq, gt, and, asc } from "drizzle-orm";
 import { isAuthenticated } from "../auth/replitAuth.js";
 
 const router = Router();
@@ -37,35 +36,36 @@ export interface DeltaEvent {
 }
 
 // ─── Event type mapping ───────────────────────────────────────────────────────
-// Maps world_event_log.event → Unity delta type name
 
 const EVENT_TYPE_MAP: Record<string, string> = {
-  npc_migrate:          "npc_move",
-  npc_goal_changed:     "npc_move",
-  npc_birth:            "npc_move",
-  npc_death:            "npc_move",
-  territory_capture:    "territory_capture",
-  territory_collapse:   "territory_collapse",
-  territory_recolonized:"territory_recolonized",
-  army_move:            "army_move",
-  army_arrived:         "army_arrived",
-  army_siege_started:   "army_siege",
-  army_siege_ended:     "army_siege",
-  faction_created:      "faction_changed",
+  npc_migrate:           "npc_move",
+  npc_goal_changed:      "npc_move",
+  npc_birth:             "npc_move",
+  npc_death:             "npc_move",
+  territory_capture:     "territory_capture",
+  territory_collapse:    "territory_collapse",
+  territory_recolonized: "territory_recolonized",
+  army_move:             "army_move",
+  army_arrived:          "army_arrived",
+  army_siege_started:    "army_siege",
+  army_siege_ended:      "army_siege",
+  faction_created:       "faction_changed",
   faction_leader_changed:"faction_changed",
-  election_result:      "faction_changed",
-  diplomacy_action:     "faction_changed",
-  world_war_start:      "faction_changed",
-  world_war_end:        "faction_changed",
-  battle_result:        "faction_changed",
-  world_tick:           "world_tick",
-  // trade route events
-  route_disrupted:      "world_tick",
-  route_restored:       "world_tick",
+  election_result:       "faction_changed",
+  diplomacy_action:      "faction_changed",
+  world_war_start:       "faction_changed",
+  world_war_end:         "faction_changed",
+  battle_result:         "faction_changed",
+  world_tick:            "world_tick",
+  route_disrupted:       "world_tick",
+  route_restored:        "world_tick",
 };
 
-// Derive entityId from payload based on event type
-function extractEntityId(event: string, payload: Record<string, unknown>, worldSlug: string): string {
+function extractEntityId(
+  event: string,
+  payload: Record<string, unknown>,
+  worldSlug: string,
+): string {
   const p = payload as Record<string, string | null | undefined>;
   switch (event) {
     case "npc_migrate":
@@ -96,44 +96,56 @@ function extractEntityId(event: string, payload: Record<string, unknown>, worldS
   }
 }
 
-// Convert a raw event log row to DeltaEvent
-function toDelta(row: { event: string; tick: number; payload: Record<string, unknown>; worldSlug: string }): DeltaEvent {
-  const type = EVENT_TYPE_MAP[row.event] ?? row.event;
-  const entityId = extractEntityId(row.event, row.payload, row.worldSlug);
+function toDelta(row: {
+  event: string;
+  tick: number;
+  payload: Record<string, unknown>;
+  worldSlug: string;
+}): DeltaEvent {
   return {
-    type,
+    type:     EVENT_TYPE_MAP[row.event] ?? row.event,
     tick:     row.tick,
-    entityId,
+    entityId: extractEntityId(row.event, row.payload, row.worldSlug),
     changes:  row.payload,
   };
 }
 
-// ─── Per-client lastTickSent cursor (in-memory) ────────────────────────────
+// ─── Persistent cursor helpers ────────────────────────────────────────────────
 
-// key: `${worldSlug}:${clientId}`
-const lastTickSent = new Map<string, number>();
-
-function getLastTick(worldSlug: string, clientId: string | null, fallback: number): number {
-  if (!clientId) return fallback;
-  return lastTickSent.get(`${worldSlug}:${clientId}`) ?? fallback;
+async function getPersistedCursor(worldSlug: string): Promise<number> {
+  const [row] = await db
+    .select({ lastTickSent: worldStreamState.lastTickSent })
+    .from(worldStreamState)
+    .where(eq(worldStreamState.worldSlug, worldSlug))
+    .limit(1);
+  return row?.lastTickSent ?? 0;
 }
 
-function setLastTick(worldSlug: string, clientId: string | null, tick: number): void {
-  if (!clientId) return;
-  lastTickSent.set(`${worldSlug}:${clientId}`, tick);
+async function setPersistedCursor(worldSlug: string, tick: number): Promise<void> {
+  await db
+    .insert(worldStreamState)
+    .values({ worldSlug, lastTickSent: tick, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: worldStreamState.worldSlug,
+      set: { lastTickSent: tick, updatedAt: new Date() },
+    });
 }
 
 // ─── GET /api/unity/delta/:worldSlug ─────────────────────────────────────────
 
 router.get("/unity/delta/:worldSlug", async (req, res) => {
   const { worldSlug } = req.params as Record<string, string>;
-  const clientId   = (req.query.clientId  as string | undefined) ?? null;
-  const lastTickQs = Number(req.query.lastTick ?? 0);
-  const limit      = Math.min(Number(req.query.limit ?? 200), 1000);
-
-  const since = getLastTick(worldSlug, clientId, lastTickQs);
+  const explicitLastTick = req.query.lastTick !== undefined
+    ? Number(req.query.lastTick)
+    : null;
+  const limit = Math.min(Number(req.query.limit ?? 200), 1000);
 
   try {
+    // Use explicit override if provided, otherwise read persisted cursor
+    const since = explicitLastTick !== null
+      ? explicitLastTick
+      : await getPersistedCursor(worldSlug);
+
     const rows = await db
       .select({
         event:     worldEventLog.event,
@@ -150,17 +162,20 @@ router.get("/unity/delta/:worldSlug", async (req, res) => {
       .orderBy(asc(worldEventLog.tick), asc(worldEventLog.ts))
       .limit(limit);
 
-    const deltas = rows.map(toDelta);
+    const deltas  = rows.map(toDelta);
     const maxTick = rows.length > 0 ? rows[rows.length - 1].tick : since;
 
-    setLastTick(worldSlug, clientId, maxTick);
+    // Persist the new cursor so restarts don't re-replay events
+    if (rows.length > 0) {
+      await setPersistedCursor(worldSlug, maxTick);
+    }
 
     return res.json({
       worldSlug,
-      lastTickSent:    maxTick,
-      previousCursor:  since,
-      count:           deltas.length,
-      events:          deltas,
+      lastTickSent:   maxTick,
+      previousCursor: since,
+      count:          deltas.length,
+      events:         deltas,
     });
   } catch (err) {
     console.error("[UnityDelta] fetch error:", err);
@@ -169,7 +184,6 @@ router.get("/unity/delta/:worldSlug", async (req, res) => {
 });
 
 // ─── GET /api/unity/delta/:worldSlug/snapshot-size ───────────────────────────
-// Returns approximate byte size of a full-state snapshot for bandwidth comparison
 
 router.get("/unity/delta/:worldSlug/snapshot-size", async (req, res) => {
   const { worldSlug } = req.params as Record<string, string>;
@@ -180,9 +194,12 @@ router.get("/unity/delta/:worldSlug/snapshot-size", async (req, res) => {
 
     const [terrRows, npcRows, factionRows, armyRows, movementRows] = await Promise.all([
       db.select().from(territories).where(eq(territories.worldSlug, worldSlug)),
-      db.select({ id: npcCores.id, name: npcCores.name, territoryId: npcCores.territoryId,
-                  occupation: npcCores.occupation, energy: npcCores.energy, hunger: npcCores.hunger,
-                  happiness: npcCores.happiness, currentGoal: npcCores.currentGoal })
+      db.select({
+          id: npcCores.id, name: npcCores.name, territoryId: npcCores.territoryId,
+          occupation: npcCores.occupation, energy: npcCores.energy,
+          hunger: npcCores.hunger, happiness: npcCores.happiness,
+          currentGoal: npcCores.currentGoal,
+        })
         .from(npcCores).where(eq(npcCores.worldSlug, worldSlug)).limit(300),
       db.select().from(npcFactions).where(eq(npcFactions.worldSlug, worldSlug)),
       db.select().from(militaryForces).where(
@@ -191,28 +208,20 @@ router.get("/unity/delta/:worldSlug/snapshot-size", async (req, res) => {
       db.select().from(armyMovements).where(eq(armyMovements.worldSlug, worldSlug)),
     ]);
 
-    const snapshot = {
-      worldSlug,
-      ts: Date.now(),
-      territories: terrRows,
-      npcs: npcRows,
-      factions: factionRows,
-      armies: armyRows,
-      movements: movementRows,
-    };
-
+    const snapshot = { worldSlug, ts: Date.now(), territories: terrRows, npcs: npcRows, factions: factionRows, armies: armyRows, movements: movementRows };
     const json = JSON.stringify(snapshot);
+
     return res.json({
       worldSlug,
       entityCounts: {
         territories: terrRows.length,
-        npcs: npcRows.length,
-        factions: factionRows.length,
-        armies: armyRows.length,
-        movements: movementRows.length,
+        npcs:        npcRows.length,
+        factions:    factionRows.length,
+        armies:      armyRows.length,
+        movements:   movementRows.length,
       },
       snapshotBytes: Buffer.byteLength(json, "utf8"),
-      snapshotKb: Math.round(Buffer.byteLength(json, "utf8") / 1024),
+      snapshotKb:    Math.round(Buffer.byteLength(json, "utf8") / 1024),
     });
   } catch (err) {
     console.error("[UnityDelta] snapshot-size error:", err);
@@ -221,7 +230,6 @@ router.get("/unity/delta/:worldSlug/snapshot-size", async (req, res) => {
 });
 
 // ─── POST /api/unity/delta/:worldSlug/benchmark ───────────────────────────────
-// Auth-gated. Measures full-state vs delta bandwidth for N ticks.
 
 router.post("/unity/delta/:worldSlug/benchmark", isAuthenticated, async (req, res) => {
   const { worldSlug } = req.params as Record<string, string>;
@@ -229,21 +237,22 @@ router.post("/unity/delta/:worldSlug/benchmark", isAuthenticated, async (req, re
   const ticks = Math.min(requestedTicks, 5000);
 
   try {
-    // 1. Full-state snapshot size
     const { territories, npcCores, npcFactions, militaryForces, armyMovements } =
       await import("@workspace/db/schema");
-
-    const { sql: rawSql2 } = await import("drizzle-orm");
+    const { sql: rawSql } = await import("drizzle-orm");
 
     const [terrRows, npcRows, factionRows, armyRows, movRows] = await Promise.all([
       db.select().from(territories).where(eq(territories.worldSlug, worldSlug)),
-      db.select({ id: npcCores.id, name: npcCores.name, territoryId: npcCores.territoryId,
-                  occupation: npcCores.occupation, energy: npcCores.energy, hunger: npcCores.hunger,
-                  happiness: npcCores.happiness, currentGoal: npcCores.currentGoal })
+      db.select({
+          id: npcCores.id, name: npcCores.name, territoryId: npcCores.territoryId,
+          occupation: npcCores.occupation, energy: npcCores.energy,
+          hunger: npcCores.hunger, happiness: npcCores.happiness,
+          currentGoal: npcCores.currentGoal,
+        })
         .from(npcCores).where(eq(npcCores.worldSlug, worldSlug)).limit(300),
       db.select().from(npcFactions).where(eq(npcFactions.worldSlug, worldSlug)),
       db.select().from(militaryForces).where(
-        rawSql2`${militaryForces.territoryId} IN (SELECT id FROM territories WHERE world_slug = ${worldSlug})`
+        rawSql`${militaryForces.territoryId} IN (SELECT id FROM territories WHERE world_slug = ${worldSlug})`
       ),
       db.select().from(armyMovements).where(eq(armyMovements.worldSlug, worldSlug)),
     ]);
@@ -251,15 +260,10 @@ router.post("/unity/delta/:worldSlug/benchmark", isAuthenticated, async (req, re
     const fullSnapshot = { worldSlug, ts: Date.now(), territories: terrRows, npcs: npcRows, factions: factionRows, armies: armyRows, movements: movRows };
     const fullStateBytes = Buffer.byteLength(JSON.stringify(fullSnapshot), "utf8");
 
-    // 2. Get current max tick in event log
-    const { sql: rawSql } = await import("drizzle-orm");
     const maxTickRes = await db.execute(
       rawSql`SELECT MAX(tick) as max_tick FROM world_event_log WHERE world_slug = ${worldSlug}`
     );
     const currentMaxTick = Number((maxTickRes as any).rows?.[0]?.max_tick ?? 0);
-
-    // Simulate polling: how many events come in for tick windows of [start, start+ticks]
-    // Use actual events in DB to measure real delta payload
     const startTick = Math.max(0, currentMaxTick - ticks);
 
     const deltaRows = await db
@@ -278,21 +282,16 @@ router.post("/unity/delta/:worldSlug/benchmark", isAuthenticated, async (req, re
       .orderBy(asc(worldEventLog.tick))
       .limit(ticks * 10);
 
-    const deltaEvents = deltaRows.map(toDelta);
-    const deltaTotalBytes = Buffer.byteLength(JSON.stringify(deltaEvents), "utf8");
-
-    // 3. Simulate what full-state polling would cost over N ticks
-    // Assume: every 10 ticks Unity would do 1 full poll (typical practice)
-    const fullPollEvery = 10;
-    const numFullPolls = Math.ceil(ticks / fullPollEvery);
+    const deltaEvents      = deltaRows.map(toDelta);
+    const deltaTotalBytes  = Buffer.byteLength(JSON.stringify(deltaEvents), "utf8");
+    const fullPollEvery    = 10;
+    const numFullPolls     = Math.ceil(ticks / fullPollEvery);
     const fullStateTotalBytes = numFullPolls * fullStateBytes;
-
-    const savingsBytes = fullStateTotalBytes - deltaTotalBytes;
-    const savingsPct = fullStateTotalBytes > 0
+    const savingsBytes     = fullStateTotalBytes - deltaTotalBytes;
+    const savingsPct       = fullStateTotalBytes > 0
       ? Math.round((savingsBytes / fullStateTotalBytes) * 100)
       : 0;
 
-    // 4. Event breakdown by delta type
     const byType: Record<string, number> = {};
     for (const evt of deltaEvents) {
       byType[evt.type] = (byType[evt.type] ?? 0) + 1;
@@ -304,18 +303,18 @@ router.post("/unity/delta/:worldSlug/benchmark", isAuthenticated, async (req, re
       fullState: {
         entityCounts: {
           territories: terrRows.length,
-          npcs: npcRows.length,
-          factions: factionRows.length,
-          armies: armyRows.length,
-          movements: movRows.length,
+          npcs:        npcRows.length,
+          factions:    factionRows.length,
+          armies:      armyRows.length,
+          movements:   movRows.length,
         },
-        singleSnapshotBytes: fullStateBytes,
-        singleSnapshotKb:    Math.round(fullStateBytes / 1024),
-        pollEveryNTicks:     fullPollEvery,
-        numPolls:            numFullPolls,
-        totalBandwidthBytes: fullStateTotalBytes,
-        totalBandwidthKb:    Math.round(fullStateTotalBytes / 1024),
-        totalBandwidthMb:    Math.round((fullStateTotalBytes / 1024 / 1024) * 100) / 100,
+        singleSnapshotBytes:  fullStateBytes,
+        singleSnapshotKb:     Math.round(fullStateBytes / 1024),
+        pollEveryNTicks:      fullPollEvery,
+        numPolls:             numFullPolls,
+        totalBandwidthBytes:  fullStateTotalBytes,
+        totalBandwidthKb:     Math.round(fullStateTotalBytes / 1024),
+        totalBandwidthMb:     Math.round((fullStateTotalBytes / 1024 / 1024) * 100) / 100,
       },
       delta: {
         eventsFound:         deltaRows.length,
@@ -330,10 +329,10 @@ router.post("/unity/delta/:worldSlug/benchmark", isAuthenticated, async (req, re
       },
       comparison: {
         savingsBytes,
-        savingsKb:    Math.round(savingsBytes / 1024),
-        savingsMb:    Math.round((savingsBytes / 1024 / 1024) * 100) / 100,
-        savingsPct:   `${savingsPct}%`,
-        winner:       savingsPct > 0 ? "delta" : "full-state",
+        savingsKb:  Math.round(savingsBytes / 1024),
+        savingsMb:  Math.round((savingsBytes / 1024 / 1024) * 100) / 100,
+        savingsPct: `${savingsPct}%`,
+        winner:     savingsPct > 0 ? "delta" : "full-state",
       },
     });
   } catch (err) {
