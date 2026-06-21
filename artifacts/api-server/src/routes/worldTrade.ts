@@ -6,11 +6,11 @@ import {
   characters, items, inventory, customWorlds,
 } from "@workspace/db/schema";
 import { eq, and, desc, or, ne, sql } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 function getGold(stats: unknown): number {
   return ((stats as any)?.gold ?? 0) as number;
@@ -33,7 +33,7 @@ async function renameItemCrossWorld(
   itemName: string, itemDesc: string, fromWorld: string, toWorld: string
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const from = WORLD_LABELS[fromWorld] ?? fromWorld;
     const to = WORLD_LABELS[toWorld] ?? toWorld;
     const prompt = `Item "${itemName}" (${itemDesc}) đến từ thế giới ${from} vừa vượt "Rào Cản Thế Giới" vào thế giới ${to}.

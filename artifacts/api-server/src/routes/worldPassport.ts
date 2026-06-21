@@ -3,10 +3,10 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { worldPassports, worldEntryLog, characters, customWorlds, npcs, worldEvents } from "@workspace/db/schema";
 import { eq, and, desc, or } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 // GET /api/passport/worlds — danh sách custom worlds public để xin nhập cảnh
 router.get("/passport/worlds", isAuthenticated, async (req, res) => {
@@ -211,7 +211,7 @@ router.get("/passport/visit/:worldSlug", isAuthenticated, async (req, res) => {
     // AI sinh lời chào của thế giới
     let welcomeNarrative = "";
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+      const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
       const prompt = `Một khách du hành vừa bước vào thế giới "${world.name}" (${world.genre}).
 Lore: ${world.lore?.slice(0, 200)}
 Hãy viết lời chào mừng ngắn gọn theo góc nhìn người quan sát (2 câu, phong cách của thế giới, bí ẩn, hấp dẫn). Tiếng Việt.`;

@@ -3,10 +3,10 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { fateEvents, fateReadings, characters } from "@workspace/db/schema";
 import { eq, and, desc, gt, lt } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const HEXAGRAMS = [
   { symbol: "☰", name: "Càn — Thiên", element: "Kim" },
@@ -143,7 +143,7 @@ router.post("/fate/trigger/:characterId", isAuthenticated, async (req, res) => {
     const hexagram = HEXAGRAMS[(fateNumber - 1) % 8];
 
     // AI sinh description cho event
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const charStats = char.stats as any;
     const worldSlug = charStats?.worldSlug ?? "cultivation";
     const descPrompt = `Nhân vật ${char.name} (Lv.${char.level}, mệnh ${hexagram.symbol} ${hexagram.name}) vừa kích hoạt Mệnh Cục:
@@ -225,7 +225,7 @@ router.post("/fate/consult/:characterId", isAuthenticated, async (req, res) => {
     const hexagram = HEXAGRAMS[hexIdx];
     const charStats = char.stats as any;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const prompt = `Bạn là Thiên Cơ Tiên — nhà tiên tri huyền bí trong thế giới cyber cultivation.
 Nhân vật: ${char.name} (Lv.${char.level}, Mệnh Số ${fateNumber})
 Quẻ bốc được: ${hexagram.symbol} ${hexagram.name} (Ngũ hành: ${hexagram.element})

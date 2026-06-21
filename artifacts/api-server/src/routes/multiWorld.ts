@@ -6,10 +6,10 @@ import {
   userWorldSlots, characters,
 } from "@workspace/db/schema";
 import { eq, and, or, count } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 async function getOrCreateSlot(userId: string) {
   const existing = await db.select().from(userWorldSlots).where(eq(userWorldSlots.userId, userId));
@@ -68,7 +68,7 @@ router.post("/multiworld/portal/create", isAuthenticated, async (req: any, res) 
     if (!fw || !tw) return res.status(404).json({ message: "Thế giới không tồn tại" });
     if (fw.createdBy !== userId) return res.status(403).json({ message: "Không phải chủ thế giới nguồn" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const result = await model.generateContent(
       `Hãy viết 1 đoạn narrative ngắn (2-3 câu, tiếng Việt, văn phong sử thi) mô tả việc mở cổng truyền tống "${portalName}" nối từ thế giới "${fw.name}" (${fw.genre}) đến "${tw.name}" (${tw.genre}). Chỉ trả về đoạn văn, không có gì khác.`
     );

@@ -3,10 +3,10 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { legends, legendVotes, characters, characterAchievements } from "@workspace/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const BUILTIN_WORLDS: Record<string, string> = {
   cultivation: "Tu Tiên Giới",
@@ -24,7 +24,7 @@ async function checkEligibility(char: any, achievementCount: number): Promise<{ 
 
 async function generateEpicStory(char: any, worldName: string, reasons: string[]): Promise<{ title: string; story: string }> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const reasonStr = reasons.join(", ");
     const prompt = `Viết câu chuyện sử thi (6-8 câu, tiếng Việt) về huyền thoại "${char.name}" - ${char.system ?? "Kiếm Thần"} của thế giới "${worldName}". Thành tựu: ${reasonStr}. Cấp ${char.level}. Phong cách thơ văn lãng mạn-huyền bí. Bắt đầu bằng mô tả khí chất, kết thúc bằng lời truyền đời. Chỉ trả câu chuyện.`;
     const result = await model.generateContent(prompt);

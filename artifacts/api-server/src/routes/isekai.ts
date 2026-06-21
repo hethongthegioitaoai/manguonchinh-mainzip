@@ -3,10 +3,10 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { isekaiRecords, characters, customWorlds, worldEvents } from "@workspace/db/schema";
 import { eq, and, desc, ne, sql } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const BUILTIN_WORLDS = [
   { slug: "cultivation", name: "Đại Lục Tu Tiên", genre: "tu_tien", lore: "Nơi linh khí tràn lan, kiếm tiên lướt mây, tông môn tranh bá." },
@@ -113,7 +113,7 @@ router.post("/isekai/enter", isAuthenticated, async (req, res) => {
     const fromWorld = BUILTIN_WORLDS.find(w => w.slug === fromWorldSlug)?.name ?? fromWorldSlug;
 
     // AI sinh narrative xuyên không
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const prompt = `Viết cảnh "xuyên không" kiểu isekai anime cho game nhập vai:
 Nhân vật: ${charName} (Lv.${char.level}) từ thế giới "${fromWorld}"
 Thế giới đích: "${target.name}" (${target.genre})

@@ -3,7 +3,7 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { characters, characterMemories, worldMemories, worldState, worldResources } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
 
@@ -196,17 +196,12 @@ router.post("/narrative/generate", isAuthenticated, async (req: any, res) => {
 
     const worldSlug = (char.stats as any)?.world_slug ?? "cultivation";
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(503).json({ message: "GEMINI_API_KEY chưa được cấu hình", fallback: true });
-    }
-
     const [memories, worldStateCtx] = await Promise.all([
       getTopMemories(characterId, 5),
       getWorldStateContext(worldSlug),
     ]);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
     const systemPrompt = buildSystemPrompt(char, worldSlug, history ?? [], memories, worldStateCtx, freeInput);
     const userTurn = freeInput
@@ -215,10 +210,8 @@ router.post("/narrative/generate", isAuthenticated, async (req: any, res) => {
       ? `Người chơi chọn: "${choiceLabel}". Tiếp tục.`
       : `Bắt đầu hành trình cho ${char.name}.`;
 
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: userTurn },
-    ]);
+    const _r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: systemPrompt + "\n\n" + userTurn });
+    const result = { response: { text: () => _r.text ?? "" } };
 
     const raw = result.response.text().trim();
 

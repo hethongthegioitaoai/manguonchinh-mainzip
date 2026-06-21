@@ -3,10 +3,10 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { crossWorldEvents, characterWorldTravel, characters, customWorlds } from "@workspace/db/schema";
 import { eq, desc, and } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const CROSS_EVENT_TYPES = ["portal", "war", "merge", "invasion", "alliance"] as const;
 type CrossEventType = typeof CROSS_EVENT_TYPES[number];
@@ -32,7 +32,7 @@ Trả về JSON (không markdown):
 }`;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const result = await model.generateContent(prompt);
     const raw = result.response.text().trim().replace(/^```json?\s*/i, "").replace(/```$/i, "");
     const parsed = JSON.parse(raw);

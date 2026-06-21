@@ -5,10 +5,10 @@ import { cosmicEntities, cosmicEvents, cosmicRankings, starDomains, customWorlds
 import { eq, desc, count } from "drizzle-orm";
 
 const COSMIC_TIER_NAMES: Record<number, string> = { 1: "THẾ GIỚI", 2: "TINH VỰC", 3: "NGÂN HÀ", 4: "THIÊN HÀ", 5: "VŨ TRỤ" };
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 async function ensureCosmicEntity(userId: string) {
   const existing = await db.select().from(cosmicEntities).where(eq(cosmicEntities.ownerUserId, userId));
@@ -105,7 +105,7 @@ router.post("/cosmos/ascend/:entityId", isAuthenticated, async (req: any, res) =
     const newType = ["", "world", "star_domain", "galaxy", "universe", "cosmos"][newTier];
     const tierName = COSMIC_TIER_NAMES[newTier] ?? "THIÊN ĐẾ";
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const r = await model.generateContent(
       `Viết 3-4 câu narrative sử thi hào hùng bằng tiếng Việt về sự kiện "${entity.entityName}" thăng cấp từ ${COSMIC_TIER_NAMES[entity.tier]} lên ${tierName} trong vũ trụ tu tiên cyber. Văn phong cực kỳ hoành tráng, rung chuyển cả vũ trụ. Chỉ trả về đoạn văn.`
     );
@@ -165,7 +165,7 @@ router.post("/cosmos/event/trigger", isAuthenticated, async (req: any, res) => {
     const EVENT_TYPES = ["invasion", "alliance", "wonder", "collapse"];
     const eventType = EVENT_TYPES[Math.floor(Math.random() * EVENT_TYPES.length)];
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const r = await model.generateContent(
       `Sinh một sự kiện vũ trụ ngẫu nhiên loại "${eventType}" ảnh hưởng đến "${target.entityName}" (tier ${target.tier}: ${COSMIC_TIER_NAMES[target.tier]}).
       Trả về JSON: { "title": "...", "description": "...", "narrative": "..." }`

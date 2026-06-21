@@ -9,7 +9,7 @@ import {
   npcDialogueSessions, npcDialogueMemories,
 } from "@workspace/db/schema";
 import { eq, desc, and, or } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
 
@@ -314,32 +314,27 @@ async function generateGeminiResponse(
   history: Array<{ role: string; content: string }>,
   playerMessage: string,
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("No GEMINI_API_KEY");
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
   const systemPrompt = buildSystemPrompt(ctx);
 
-  // Build chat history (tối đa 8 lượt gần nhất)
   const recentHistory = history.slice(-8);
-  const historyParts = recentHistory.map(h => ({
-    role: h.role === "player" ? "user" : "model",
-    parts: [{ text: h.content }],
-  }));
+  const contents = [
+    { role: "user" as const, parts: [{ text: systemPrompt }] },
+    { role: "model" as const, parts: [{ text: `Được rồi, ${ctx.npc.name} ở đây. Tôi hiểu vai trò và sẽ duy trì nhân vật.` }] },
+    ...recentHistory.map(h => ({
+      role: (h.role === "player" ? "user" : "model") as "user" | "model",
+      parts: [{ text: h.content }],
+    })),
+    { role: "user" as const, parts: [{ text: playerMessage }] },
+  ];
 
-  const chat = model.startChat({
-    history: [
-      { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: `Được rồi, ${ctx.npc.name} ở đây. Tôi hiểu vai trò và sẽ duy trì nhân vật.` }] },
-      ...historyParts,
-    ],
-    generationConfig: { maxOutputTokens: 256, temperature: 0.85 },
+  const result = await genAI.models.generateContent({
+    model: "gemini-2.0-flash-lite",
+    contents,
+    config: { maxOutputTokens: 256, temperature: 0.85 },
   });
-
-  const result = await chat.sendMessage(playerMessage);
-  return result.response.text().trim();
+  return (result.text ?? "").trim();
 }
 
 /* ════════════════════════════════════════

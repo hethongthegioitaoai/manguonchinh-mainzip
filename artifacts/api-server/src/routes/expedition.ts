@@ -4,10 +4,10 @@ import { db } from "@workspace/db";
 import { expeditions, expeditionEvents, characters, customWorlds } from "@workspace/db/schema";
 import { eq, and, desc, or } from "drizzle-orm";
 import { z } from "zod";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const STEP_COOLDOWN_MS = 5 * 60 * 1000;
 
@@ -52,7 +52,7 @@ async function generateEventNarrative(worldName: string, eventType: string, step
   const hpChange = base.hpLoss < 0 ? base.hpLoss : base.hpLoss;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const memberStr = memberNames.slice(0, 3).join(", ");
     const prompt = `Viết 2-3 câu mô tả sự kiện "${eventType}" tại bước thứ ${step} trong thám hiểm nhóm ở thế giới "${worldName}". Đội có: ${memberStr}. Kết quả: ${goldChange > 0 ? `+${goldChange} gold` : `${goldChange} gold`}, ${hpChange < 0 ? `${hpChange} HP` : "hồi HP"}. Tiếng Việt, phong cách lore cyber cultivation. Chỉ trả mô tả, không giải thích.`;
     const result = await model.generateContent(prompt);

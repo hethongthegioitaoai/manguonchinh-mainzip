@@ -3,11 +3,11 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { customWorlds } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const GENRES = ["tu_tien", "cyberpunk", "fantasy", "horror", "scifi", "wasteland", "steampunk", "xianxia"] as const;
 type Genre = typeof GENRES[number];
@@ -58,7 +58,7 @@ Trả về JSON (không markdown):
   "tagline": "<khẩu hiệu thế giới — tối đa 10 từ, ấn tượng>"
 }`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
   const result = await model.generateContent(prompt);
   const raw = result.response.text().trim().replace(/^```json?\s*/i, "").replace(/```$/i, "");
   return JSON.parse(raw);
@@ -153,7 +153,7 @@ Trả về JSON (không markdown):
   "tagline": "<khẩu hiệu epic — tối đa 8 từ>"
 }`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
   const result = await model.generateContent(prompt);
   const raw = result.response.text().trim().replace(/^```json?\s*/i, "").replace(/```$/i, "");
   const content = JSON.parse(raw);

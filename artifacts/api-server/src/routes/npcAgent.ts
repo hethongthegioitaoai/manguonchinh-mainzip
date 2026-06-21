@@ -8,7 +8,7 @@ import {
   npcJobs, npcAgentLogs,
 } from "@workspace/db/schema";
 import { eq, desc, and, or, asc, lt, gt, ne } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
 
@@ -408,18 +408,11 @@ function ruleBasedDecision(ctx: AgentContext): AgentDecision {
    GEMINI AGENT REASONING
 ════════════════════════════════════════ */
 async function callGeminiAgent(ctx: AgentContext): Promise<AgentDecision> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("No GEMINI_API_KEY");
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    generationConfig: { maxOutputTokens: 512, temperature: 0.7, responseMimeType: "application/json" },
-  });
+  const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
   const prompt = buildAgentPrompt(ctx);
-  const result = await model.generateContent(prompt);
-  const raw = result.response.text().trim();
+  const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: prompt, config: { maxOutputTokens: 512, temperature: 0.7, responseMimeType: "application/json" } });
+  const raw = (r.text ?? "").trim();
 
   const parsed = JSON.parse(raw);
   return {

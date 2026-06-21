@@ -3,11 +3,11 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { prophecies, prophecyClaims, characters, customWorlds } from "@workspace/db/schema";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 // Sinh prophecy mới bằng AI
 async function generateProphecy(worldSlug: string): Promise<{ content: string; hiddenCondition: string; clue: string } | null> {
@@ -17,7 +17,7 @@ async function generateProphecy(worldSlug: string): Promise<{ content: string; h
     const genre = world?.genre ?? "fantasy";
     const lore = world?.lore?.slice(0, 300) ?? "";
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const prompt = `Bạn là Oracle — nhà tiên tri huyền bí của thế giới "${worldName}" (${genre}).
 Lore: ${lore}
 
@@ -127,7 +127,7 @@ router.post("/prophecy/claim/:prophecyId", isAuthenticated, async (req, res) => 
     if (existing) return res.status(400).json({ error: "Bạn đã nộp claim cho tiên tri này rồi" });
 
     // AI chấm điểm claim
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const scorePrompt = `Lời tiên tri: "${prophecy.content}"
 Điều kiện hoàn thành thực sự: "${prophecy.hiddenCondition}"
 Bằng chứng của người chơi: "${proof}"

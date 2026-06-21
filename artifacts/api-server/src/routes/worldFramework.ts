@@ -3,11 +3,11 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { customWorlds, worldFrameworks, worldLoreEntries } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 32)
@@ -79,7 +79,7 @@ Trả về JSON thuần (không markdown, không code block):
   "tagline": "<khẩu hiệu epic 5-8 từ, nhất quán với chủ đề>"
 }`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
   const result = await model.generateContent(prompt);
   const raw = result.response.text().trim().replace(/^```json?\s*/i, "").replace(/```$/i, "");
   return JSON.parse(raw);

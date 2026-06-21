@@ -3,11 +3,11 @@ import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
 import { npcs, characters, users } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 const NPC_ROLES = ["merchant", "guardian", "raider", "sage", "assassin", "healer", "warlord"] as const;
 type NpcRole = typeof NPC_ROLES[number];
@@ -111,7 +111,7 @@ Mỗi NPC cần hành động 1 lần (1 "tick"). Trả về JSON array:
 
 Chỉ trả JSON array, không markdown.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const result = await model.generateContent(prompt);
     const raw = result.response.text().trim().replace(/^```json?\s*/i, "").replace(/```$/i, "");
     const updates = JSON.parse(raw) as Array<{ id: string; mood: string; location: string; action: string; goldDelta: number; log: string }>;
@@ -176,7 +176,7 @@ Trả về JSON:
 
 Chỉ JSON, không markdown.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
     const result = await model.generateContent(prompt);
     const raw = result.response.text().trim().replace(/^```json?\s*/i, "").replace(/```$/i, "");
     const reply = JSON.parse(raw);

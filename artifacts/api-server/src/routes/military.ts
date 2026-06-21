@@ -10,11 +10,11 @@ import {
   worldHistory,
 } from "@workspace/db/schema";
 import { eq, inArray, desc, sql } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { emitEvent, emitEventSync, EVENT } from "../lib/eventBus.js";
 
 const router = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY, httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL } });
 
 function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
@@ -439,7 +439,7 @@ Tình trạng hiện tại:
 
     let decisions: string[] = [];
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+      const model = { generateContent: async (p: any) => { const r = await genAI.models.generateContent({ model: "gemini-2.0-flash-lite", contents: typeof p === "string" ? p : p }); return { response: { text: () => r.text ?? "" } }; } };
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
       const json = JSON.parse(text.replace(/```json|```/g, "").trim());
