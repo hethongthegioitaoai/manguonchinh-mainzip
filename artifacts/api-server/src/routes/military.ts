@@ -4,12 +4,14 @@ import { db } from "@workspace/db";
 import {
   militaryForces, militaryMemories,
   npcGovernments, npcGovernmentLogs,
-  territories,
-  npcCores,
+  territories, territoryLogs,
+  npcCores, npcFactions,
   governmentActivePolicies, governmentPolicies,
+  worldHistory,
 } from "@workspace/db/schema";
 import { eq, inArray, desc, sql } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
@@ -458,6 +460,195 @@ Tình trạng hiện tại:
     }
 
     return res.json({ decisions, context: { avgPower, avgMorale, avgSupply, totalGov, avgApproval } });
+  } catch (e: any) {
+    return res.status(500).json({ message: e.message });
+  }
+});
+
+/* ════════════════════════════════════════
+   POST /api/military/attack/:worldSlug
+   War v1 — Faction A tấn công Faction B, chiếm lãnh thổ
+   Body: { attackerGovId, defenderGovId, targetTerritoryId }
+════════════════════════════════════════ */
+router.post("/military/attack/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const { attackerGovId, defenderGovId, targetTerritoryId } = req.body as {
+      attackerGovId: string; defenderGovId: string; targetTerritoryId: string;
+    };
+    if (!attackerGovId || !defenderGovId || !targetTerritoryId) {
+      return res.status(400).json({ message: "Thiếu attackerGovId / defenderGovId / targetTerritoryId" });
+    }
+
+    /* ─── Load entities ─── */
+    const [attackerGov] = await db.select().from(npcGovernments).where(eq(npcGovernments.id, attackerGovId));
+    const [defenderGov] = await db.select().from(npcGovernments).where(eq(npcGovernments.id, defenderGovId));
+    const [targetTerr]  = await db.select().from(territories).where(eq(territories.id, targetTerritoryId));
+    if (!attackerGov || !defenderGov || !targetTerr) return res.status(404).json({ message: "Không tìm thấy chính phủ hoặc lãnh thổ" });
+    if (targetTerr.worldSlug !== worldSlug)           return res.status(400).json({ message: "Lãnh thổ không thuộc thế giới này" });
+
+    const [attackerArmy] = await db.select().from(militaryForces).where(eq(militaryForces.governmentId, attackerGovId));
+    const [defenderArmy] = await db.select().from(militaryForces).where(eq(militaryForces.governmentId, defenderGovId));
+    if (!attackerArmy) return res.status(400).json({ message: "Quân tấn công chưa thành lập quân đội" });
+
+    /* ─── Load faction names via territory.ownerFactionId ─── */
+    const [atkTerritory] = await db.select().from(territories).where(eq(territories.id, attackerGov.territoryId));
+    const [atkFaction] = atkTerritory?.ownerFactionId
+      ? await db.select().from(npcFactions).where(eq(npcFactions.id, atkTerritory.ownerFactionId))
+      : [];
+    const [defTerritory] = await db.select().from(territories).where(eq(territories.id, defenderGov.territoryId));
+    const [defFaction] = defTerritory?.ownerFactionId
+      ? await db.select().from(npcFactions).where(eq(npcFactions.id, defTerritory.ownerFactionId))
+      : [];
+    const atkName = atkFaction?.name ?? attackerGov.govType ?? "Thế Lực Ẩn Danh";
+    const defName = defFaction?.name ?? defenderGov.govType ?? "Thế Lực Phòng Thủ";
+
+    /* ─── Combat simulation: 30 ticks ─── */
+    let soldA = attackerArmy.totalSoldiers, morA = attackerArmy.morale,
+        trainA = attackerArmy.trainingLevel, supA = attackerArmy.supplyLevel;
+    let soldB = defenderArmy?.totalSoldiers ?? 0, morB = defenderArmy?.morale ?? 20,
+        trainB = defenderArmy?.trainingLevel ?? 2.0, supB = defenderArmy?.supplyLevel ?? 50;
+
+    let pA = calcMilitaryPower(soldA, morA, trainA, supA);
+    let pB = defenderArmy ? calcMilitaryPower(soldB, morB, trainB, supB) : 0;
+
+    // Defender gets terrain+fortification bonus (+20%)
+    const defBonus = 1.20;
+    const pBeff = Math.round(pB * defBonus);
+
+    let refugees = 0;
+    let popLoss  = 0;
+    let secLoss  = 0;
+    let combatTicks = 0;
+
+    for (let t = 0; t < 30; t++) {
+      if (soldB <= 0 || pA <= 0) break;
+      combatTicks++;
+      const totalStr = pA + pBeff + 0.001;
+      const atkRatio = pA / totalStr;
+      const defRatio = pBeff / totalStr;
+
+      const lossA = Math.max(0, Math.floor(rand(1, 4) * defRatio));
+      const lossB = Math.max(0, Math.floor(rand(2, 6) * atkRatio * rand(1, 2)));
+
+      soldA = Math.max(0, soldA - lossA);
+      soldB = Math.max(0, soldB - lossB);
+      morA  = clamp(morA - lossA * 0.5, 0, 100);
+      morB  = clamp(morB - lossB * 1.5, 0, 100);
+      pA    = calcMilitaryPower(soldA, morA, trainA, supA);
+      const newPBeff = Math.round(calcMilitaryPower(soldB, morB, trainB, supB) * defBonus);
+
+      // Civilian casualties + refugees
+      const civCas = rand(0, 4);
+      const ref    = rand(2, 8);
+      popLoss  += civCas + ref;
+      refugees += ref;
+      secLoss  += rand(1, 3);
+    }
+
+    const attackerWon = soldA > 0 && soldB <= 0;
+    const newPop      = Math.max(0, targetTerr.population - popLoss);
+    const newSec      = Math.max(0, targetTerr.security - secLoss);
+
+    /* ─── Apply results ─── */
+    await db.update(militaryForces)
+      .set({ totalSoldiers: soldA, morale: Math.round(morA), militaryPower: pA, updatedAt: new Date() })
+      .where(eq(militaryForces.id, attackerArmy.id));
+
+    if (defenderArmy) {
+      const dPower = Math.max(0, calcMilitaryPower(soldB, morB, trainB, supB));
+      await db.update(militaryForces)
+        .set({ totalSoldiers: soldB, morale: Math.round(morB), militaryPower: dPower, updatedAt: new Date() })
+        .where(eq(militaryForces.id, defenderArmy.id));
+    }
+
+    // Always update territory pop/security
+    const terrUpdate: Partial<typeof territories.$inferInsert> = {
+      population: Math.round(newPop),
+      security:   Math.round(clamp(newSec, 0, 100)),
+      updatedAt:  new Date(),
+    };
+
+    // Transfer ownership only if attacker won
+    if (attackerWon && atkFaction) {
+      terrUpdate.ownerFactionId = atkFaction.id;
+      // Determine territory status — ruins if pop nearly gone
+      if (newPop < 20) terrUpdate.status = "ruins";
+      else if (newPop < 50) terrUpdate.status = "abandoned";
+    }
+
+    await db.update(territories).set(terrUpdate).where(eq(territories.id, targetTerritoryId));
+
+    /* ─── Territory log ─── */
+    const battleSummary = attackerWon
+      ? `${atkName} chiếm ${targetTerr.name} sau ${combatTicks} lượt giao tranh — ${refugees} dân di tản`
+      : `${atkName} tấn công ${targetTerr.name} thất bại — quân địch còn ${soldB} lính`;
+    await db.insert(territoryLogs).values({ territoryId: targetTerritoryId, event: battleSummary });
+
+    /* ─── Gov logs ─── */
+    await Promise.all([
+      db.insert(npcGovernmentLogs).values({ governmentId: attackerGovId, event: battleSummary }),
+      db.insert(npcGovernmentLogs).values({ governmentId: defenderGovId, event: `Bị tấn công bởi ${atkName} — mất ${soldB === 0 ? "toàn bộ" : soldB} lính, ${Math.round(popLoss)} dân bỏ chạy` }),
+    ]);
+
+    /* ─── Military memories ─── */
+    const npcList = await db.select({ id: npcCores.id }).from(npcCores).where(eq(npcCores.worldSlug, worldSlug)).limit(20);
+    if (npcList.length > 0 && attackerArmy) {
+      const mem = attackerWon
+        ? `Chiến thắng tại ${targetTerr.name} — chiếm lãnh thổ sau trận chiến.`
+        : `Tấn công ${targetTerr.name} thất bại — rút lui để bảo toàn lực lượng.`;
+      const npc = npcList[Math.floor(Math.random() * npcList.length)];
+      await db.insert(militaryMemories).values({ npcId: npc.id, armyId: attackerArmy.id, content: mem });
+    }
+
+    /* ─── World History entry ─── */
+    const [simState] = await db.select().from(worldHistory)
+      .where(eq(worldHistory.worldSlug, worldSlug))
+      .orderBy(desc(worldHistory.tick))
+      .limit(1);
+    const currentTick = (simState?.tick ?? 0) + 1;
+
+    await db.insert(worldHistory).values({
+      worldSlug,
+      tick:        currentTick,
+      eventType:   attackerWon ? "territory_capture" : "battle_failed",
+      title:       attackerWon
+        ? `${atkName} chiếm ${targetTerr.name}`
+        : `${atkName} tấn công ${targetTerr.name} thất bại`,
+      description: battleSummary,
+      actors: {
+        factions:    atkFaction ? [atkFaction.id] : [],
+        territories: [targetTerritoryId],
+      },
+    });
+
+    /* ─── Unity broadcast ─── */
+    try {
+      broadcastUnity(worldSlug, {
+        type:              "territory_captured",
+        attackerName:      atkName,
+        defenderName:      defName,
+        territoryId:       targetTerritoryId,
+        territoryName:     targetTerr.name,
+        attackerWon,
+        refugeeCount:      Math.round(refugees),
+        attackerSoldiers:  soldA,
+        defenderSoldiers:  soldB,
+        combatTicks,
+        timestamp:         Date.now(),
+      });
+    } catch {}
+
+    return res.json({
+      attackerWon,
+      combatTicks,
+      attackerArmy: { soldiers: soldA, power: pA, moraleFinal: Math.round(morA) },
+      defenderArmy: { soldiers: soldB, power: defenderArmy ? calcMilitaryPower(soldB, morB, trainB, supB) : 0, moraleFinal: Math.round(morB) },
+      territory:    { name: targetTerr.name, newPop: Math.round(newPop), newSec: Math.round(clamp(newSec, 0, 100)), ownerChanged: attackerWon },
+      refugees:     Math.round(refugees),
+      historyTick:  currentTick,
+      message:      battleSummary,
+    });
   } catch (e: any) {
     return res.status(500).json({ message: e.message });
   }

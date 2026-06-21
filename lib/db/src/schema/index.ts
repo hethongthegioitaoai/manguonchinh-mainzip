@@ -74,3 +74,4 @@ export * from "./worldAnalytics";
 export * from "./stressTest";
 export * from "./playerAgent";
 export * from "./worldMap";
+export * from "./worldHistory";

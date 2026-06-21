@@ -1,11 +1,16 @@
 import { Router } from "express";
 import { isAuthenticated } from "../auth/replitAuth.js";
 import { db } from "@workspace/db";
-import { worldSimState, worldSimLog, customWorlds, worldFrameworks, worldDisasters, worldWeather } from "@workspace/db/schema";
-import { eq, and, desc, lt, sql } from "drizzle-orm";
+import {
+  worldSimState, worldSimLog, customWorlds, worldFrameworks, worldDisasters, worldWeather,
+  territories, territoryLogs, npcGovernments, npcCores,
+  worldHistory,
+} from "@workspace/db/schema";
+import { eq, and, desc, lt, sql, inArray, asc } from "drizzle-orm";
 import { applyGovernmentPolicies } from "./npcGovernmentPolicy.js";
 import { tickNpcWorld } from "./npcCore.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { broadcastUnity } from "../lib/unityWs.js";
 
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -154,6 +159,84 @@ Viết 1 câu tiếng Việt mô tả nhịp sống thường ngày của thế 
     if (process.env.ENABLE_NPC_HEARTBEAT === "true") {
       try { await tickNpcWorld(worldSlug, 20); } catch {}
     }
+
+    /* ─── Territory Collapse: pop<10 + sec<15 → ruins ─── */
+    /* ─── Recolonization: ruins + nearby overcrowded → active ─── */
+    try {
+      const terrs = await db.select().from(territories).where(eq(territories.worldSlug, worldSlug));
+
+      for (const terr of terrs) {
+        /* Collapse: active/abandoned territory → ruins when emptied */
+        if (terr.status !== "ruins" && terr.population < 10 && terr.security < 15) {
+          await db.update(territories)
+            .set({ status: "ruins", updatedAt: new Date() })
+            .where(eq(territories.id, terr.id));
+          await db.insert(territoryLogs).values({
+            territoryId: terr.id,
+            event: `${terr.name} sụp đổ thành phế tích — dân số ${terr.population}, an ninh ${terr.security}`,
+          });
+          await db.insert(worldHistory).values({
+            worldSlug,
+            tick:        newTick,
+            eventType:   "collapse",
+            title:       `${terr.name} sụp đổ thành phế tích`,
+            description: `Dân số giảm xuống ${terr.population}, an ninh ${terr.security} — lãnh thổ bỏ hoang thành phế tích.`,
+            actors:      { territories: [terr.id] },
+          });
+          try {
+            broadcastUnity(worldSlug, {
+              type: "territory_collapse", territoryId: terr.id,
+              territoryName: terr.name, population: terr.population, security: terr.security,
+              timestamp: Date.now(),
+            });
+          } catch {}
+        }
+
+        /* Recolonization: ruins → active when crowded neighbor pushes settlers (15% chance/tick) */
+        if (terr.status === "ruins" && Math.random() < 0.15) {
+          const overcrowded = terrs.find(t =>
+            t.id !== terr.id && t.status === "active" && t.population > 200 &&
+            Math.abs(t.x - terr.x) < 60 && Math.abs(t.y - terr.y) < 60
+          );
+          if (overcrowded) {
+            const settlers = Math.min(Math.floor(Math.random() * 6) + 3, Math.floor(overcrowded.population * 0.03));
+            if (settlers >= 3) {
+              await db.update(territories)
+                .set({
+                  status:     "active",
+                  population: settlers,
+                  prosperity: Math.max(15, Math.floor(overcrowded.prosperity * 0.4)),
+                  security:   20,
+                  updatedAt:  new Date(),
+                })
+                .where(eq(territories.id, terr.id));
+              await db.update(territories)
+                .set({ population: overcrowded.population - settlers, updatedAt: new Date() })
+                .where(eq(territories.id, overcrowded.id));
+              await db.insert(territoryLogs).values({
+                territoryId: terr.id,
+                event: `${settlers} người định cư từ ${overcrowded.name} đến tái lập ${terr.name}`,
+              });
+              await db.insert(worldHistory).values({
+                worldSlug,
+                tick:        newTick,
+                eventType:   "recolonization",
+                title:       `${terr.name} được tái lập`,
+                description: `${settlers} dân định cư từ ${overcrowded.name} đến khai phá phế tích ${terr.name}, thành lập khu định cư mới.`,
+                actors:      { territories: [terr.id, overcrowded.id] },
+              });
+              try {
+                broadcastUnity(worldSlug, {
+                  type: "recolonization", territoryId: terr.id,
+                  territoryName: terr.name, settlers,
+                  fromTerritory: overcrowded.name, timestamp: Date.now(),
+                });
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch {}
 
     return { log, state: updatedState };
   } catch (e) {
@@ -321,6 +404,54 @@ router.post("/simulation/stress-test/:worldSlug", isAuthenticated, async (req, r
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
+});
+
+/* GET /api/simulation/history/:worldSlug — lịch sử sự kiện thế giới */
+router.get("/simulation/history/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const eventType = req.query.eventType as string | undefined;
+
+    let query = db.select().from(worldHistory)
+      .where(eq(worldHistory.worldSlug, worldSlug))
+      .$dynamic();
+
+    if (eventType) {
+      query = db.select().from(worldHistory)
+        .where(and(eq(worldHistory.worldSlug, worldSlug), eq(worldHistory.eventType, eventType)))
+        .$dynamic();
+    }
+
+    const rows = await query.orderBy(desc(worldHistory.tick)).limit(limit);
+
+    const stats = {
+      total:         rows.length,
+      wars:          rows.filter(r => r.eventType === "territory_capture" || r.eventType === "battle_failed").length,
+      collapses:     rows.filter(r => r.eventType === "collapse").length,
+      recolonized:   rows.filter(r => r.eventType === "recolonization").length,
+      latestTick:    rows[0]?.tick ?? 0,
+    };
+
+    return res.json({ stats, history: rows });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+/* GET /api/simulation/history/:worldSlug/timeline — compact timeline for Unity/map */
+router.get("/simulation/history/:worldSlug/timeline", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const rows = await db.select({
+      tick:      worldHistory.tick,
+      eventType: worldHistory.eventType,
+      title:     worldHistory.title,
+      createdAt: worldHistory.createdAt,
+    }).from(worldHistory)
+      .where(eq(worldHistory.worldSlug, worldSlug))
+      .orderBy(asc(worldHistory.tick))
+      .limit(500);
+    return res.json(rows);
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
 /* POST /api/simulation/seed-defaults — upsert 3 default worlds into custom_worlds + tick */
