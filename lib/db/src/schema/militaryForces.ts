@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, real, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, real, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { npcGovernments } from "./npcGovernment";
 import { territories } from "./territories";
 import { npcCores } from "./npcCore";
@@ -29,7 +29,10 @@ export const militaryForces = pgTable("military_forces", {
 
   createdAt:       timestamp("created_at").defaultNow().notNull(),
   updatedAt:       timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("military_forces_territory_id_idx").on(t.territoryId),
+  index("military_forces_government_id_idx").on(t.governmentId),
+]);
 
 export const militaryMemories = pgTable("military_memories", {
   id:        uuid("id").primaryKey().defaultRandom(),

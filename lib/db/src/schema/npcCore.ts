@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, text, timestamp, real, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, text, timestamp, real, boolean, index } from "drizzle-orm/pg-core";
 import { territories } from "./territories";
 
 export const npcCores = pgTable("npc_cores", {
@@ -18,7 +18,9 @@ export const npcCores = pgTable("npc_cores", {
   lastTickAt: timestamp("last_tick_at"),
   createdAt: timestamp("created_at").defaultNow(),
   territoryId: uuid("territory_id").references(() => territories.id, { onDelete: "set null" }),
-});
+}, (t) => [
+  index("npc_cores_world_slug_idx").on(t.worldSlug),
+]);
 
 export const npcPersonalities = pgTable("npc_personalities", {
   id: uuid("id").primaryKey().defaultRandom(),

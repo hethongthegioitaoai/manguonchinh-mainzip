@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, text, timestamp, index } from "drizzle-orm/pg-core";
 import { npcCores } from "./npcCore";
 
 export const npcFactions = pgTable("npc_factions", {
@@ -13,7 +13,9 @@ export const npcFactions = pgTable("npc_factions", {
   militaryPower:  integer("military_power").notNull().default(0),
   createdAt:      timestamp("created_at").defaultNow(),
   updatedAt:      timestamp("updated_at").defaultNow(),
-});
+}, (t) => [
+  index("npc_factions_world_slug_idx").on(t.worldSlug),
+]);
 
 export const npcFactionMembers = pgTable("npc_faction_members", {
   id:        uuid("id").primaryKey().defaultRandom(),
