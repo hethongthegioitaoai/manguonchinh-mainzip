@@ -1665,6 +1665,91 @@ export async function tickNpcWorld(worldSlug: string, limit = 20): Promise<{ mes
       }
     }
 
+    // ── Territory Collapse ──
+    // active   : bình thường
+    // abandoned: population = 0 → prosperity/security suy giảm mỗi tick
+    // ruins    : prosperity < 10 AND security < 15 → sụp đổ hoàn toàn
+    {
+      const collapseCheck = await db
+        .select()
+        .from(territories)
+        .where(eq(territories.worldSlug, worldSlug));
+
+      for (const t of collapseCheck) {
+        const pop         = t.population ?? 0;
+        const prosperity  = t.prosperity ?? 0;
+        const security    = t.security ?? 0;
+        const status      = t.status ?? "active";
+
+        // 1. Vùng có người → đảm bảo active
+        if (pop > 0 && status !== "active") {
+          await db
+            .update(territories)
+            .set({ status: "active" })
+            .where(eq(territories.id, t.id));
+          await db.insert(territoryLogs).values({
+            territoryId: t.id,
+            event: `${t.name} được tái định cư (population ${pop}) — trạng thái: active`,
+          });
+          continue;
+        }
+
+        // 2. Vùng trống → chuyển sang abandoned
+        if (pop === 0 && status === "active") {
+          await db
+            .update(territories)
+            .set({ status: "abandoned" })
+            .where(eq(territories.id, t.id));
+          await db.insert(territoryLogs).values({
+            territoryId: t.id,
+            event: `${t.name} bị bỏ hoang — dân số về 0`,
+          });
+          continue;
+        }
+
+        // 3. Abandoned → suy giảm dần mỗi tick
+        if (status === "abandoned") {
+          const newProsperity = Math.max(0, prosperity - 1);
+          const newSecurity   = Math.max(0, security - 1);
+
+          // Đủ điều kiện collapse thành ruins?
+          if (newProsperity < 10 && newSecurity < 15) {
+            await db
+              .update(territories)
+              .set({ status: "ruins", prosperity: newProsperity, security: newSecurity })
+              .where(eq(territories.id, t.id));
+            await db.insert(territoryLogs).values({
+              territoryId: t.id,
+              event: `${t.name} sụp đổ hoàn toàn — thành phế tích (prosperity ${newProsperity}, security ${newSecurity})`,
+            });
+          } else {
+            await db
+              .update(territories)
+              .set({ prosperity: newProsperity, security: newSecurity })
+              .where(eq(territories.id, t.id));
+            await db.insert(territoryLogs).values({
+              territoryId: t.id,
+              event: `${t.name} tiếp tục hoang tàn (prosperity ${prosperity}→${newProsperity}, security ${security}→${newSecurity})`,
+            });
+          }
+          continue;
+        }
+
+        // 4. Ruins → decay cực chậm (mỗi 5 tick giảm 1)
+        if (status === "ruins") {
+          // Dùng entropy ngẫu nhiên thấp để tránh update DB mỗi tick
+          if (Math.random() < 0.2) {
+            const newProsperity = Math.max(0, prosperity - 1);
+            const newSecurity   = Math.max(0, security - 1);
+            await db
+              .update(territories)
+              .set({ prosperity: newProsperity, security: newSecurity })
+              .where(eq(territories.id, t.id));
+          }
+        }
+      }
+    }
+
     return {
       message: `Đã tick ${logs.length} NPC`,
       ticked: logs.length,
@@ -1722,6 +1807,7 @@ if (process.env.NODE_ENV !== "production") {
     ]);
 
     // ── Validate & collect anomalies ──
+    const VALID_STATUSES = ["active", "abandoned", "ruins"];
     for (const t of territoriesData) {
       if ((t.population ?? 0) < 0)
         anomalies.push(`[territory:${t.name}] population âm: ${t.population}`);
@@ -1729,6 +1815,10 @@ if (process.env.NODE_ENV !== "production") {
         anomalies.push(`[territory:${t.name}] prosperity out of range: ${t.prosperity}`);
       if ((t.security ?? 0) < 0 || (t.security ?? 0) > 100)
         anomalies.push(`[territory:${t.name}] security out of range: ${t.security}`);
+      if (!VALID_STATUSES.includes(t.status ?? ""))
+        anomalies.push(`[territory:${t.name}] status không hợp lệ: ${t.status}`);
+      if ((t.population ?? 0) > 0 && t.status !== "active")
+        anomalies.push(`[territory:${t.name}] có dân (${t.population}) nhưng status="${t.status}" — nên là active`);
     }
 
     for (const npc of npcsData) {
@@ -1773,6 +1863,7 @@ if (process.env.NODE_ENV !== "production") {
 
       territories: territoriesData.map((t) => ({
         name: t.name,
+        status: t.status,
         population: t.population,
         prosperity: t.prosperity,
         security: t.security,

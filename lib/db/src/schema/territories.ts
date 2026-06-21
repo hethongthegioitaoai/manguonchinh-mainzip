@@ -13,6 +13,7 @@ export const territories = pgTable("territories", {
   x:               integer("x").notNull().default(50),
   y:               integer("y").notNull().default(50),
   terrain:         varchar("terrain", { length: 32 }).notNull().default("plains"),
+  status:          varchar("status", { length: 32 }).notNull().default("active"),
   lastHarvestAt:   timestamp("last_harvest_at"),
   createdAt:       timestamp("created_at").defaultNow(),
   updatedAt:       timestamp("updated_at").defaultNow(),
