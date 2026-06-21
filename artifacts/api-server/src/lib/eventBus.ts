@@ -1,5 +1,6 @@
 /**
  * Phase 65B — Event Bus
+ * Phase 65.5 — Event Retention (keep 100k newest per world)
  *
  * emitEvent() is the single point-of-truth for all simulation events:
  *   1. Writes to persistent `world_event_log` table (replay-safe)
@@ -11,7 +12,47 @@
 
 import { db } from "@workspace/db";
 import { worldEventLog } from "@workspace/db/schema";
+import { sql, eq } from "drizzle-orm";
 import { broadcastEvent, type WorldEvent } from "./unityWs.js";
+
+// ─── Phase 65.5: Event Retention ─────────────────────────────────────────────
+
+const RETENTION_LIMIT = 100_000;
+const _emitCounts = new Map<string, number>();
+
+/**
+ * Prune world_event_log for a world — keep newest RETENTION_LIMIT rows.
+ * Returns number of deleted rows (0 if nothing pruned).
+ */
+export async function pruneEventLog(worldSlug: string): Promise<number> {
+  try {
+    const result = await db.execute(sql`
+      DELETE FROM world_event_log
+      WHERE world_slug = ${worldSlug}
+        AND id NOT IN (
+          SELECT id FROM world_event_log
+          WHERE world_slug = ${worldSlug}
+          ORDER BY ts DESC
+          LIMIT ${RETENTION_LIMIT}
+        )
+    `);
+    const deleted = (result as any).rowCount ?? 0;
+    if (deleted > 0) console.log(`[EventBus] Pruned ${deleted} rows for world ${worldSlug}`);
+    return deleted;
+  } catch (e) {
+    console.warn(`[EventBus] Prune failed for ${worldSlug}:`, e);
+    return 0;
+  }
+}
+
+/** Call after every emit; prunes only every 1000 events per world to avoid overhead. */
+async function maybePrune(worldSlug: string): Promise<void> {
+  const n = (_emitCounts.get(worldSlug) ?? 0) + 1;
+  _emitCounts.set(worldSlug, n);
+  if (n % 1_000 === 0) {
+    pruneEventLog(worldSlug).catch(() => {});
+  }
+}
 
 export type { WorldEvent };
 
@@ -74,6 +115,7 @@ export async function emitEvent(
   // 1. Persist to event log
   try {
     await db.insert(worldEventLog).values({ worldSlug, tick, event, payload, ts });
+    maybePrune(worldSlug).catch(() => {});
   } catch (e) {
     console.warn(`[EventBus] DB write failed for ${event}:`, e);
   }

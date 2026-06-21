@@ -6,9 +6,10 @@ import {
   territories, territoryLogs, npcGovernments, npcCores,
   worldHistory, worldSnapshots,
   npcFactions, militaryForces,
+  worldEventLog,
 } from "@workspace/db/schema";
 import type { WorldSnapshotData, WorldSnapshotAggregates } from "@workspace/db/schema";
-import { eq, and, desc, lt, sql, inArray, asc, lte } from "drizzle-orm";
+import { eq, and, desc, lt, sql, inArray, asc, lte, gte, or, count } from "drizzle-orm";
 import { applyGovernmentPolicies } from "./npcGovernmentPolicy.js";
 import { tickNpcWorld } from "./npcCore.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -814,6 +815,93 @@ router.post("/simulation/seed-defaults", async (_req, res) => {
 
     res.json({ seeded: defaults.length, ticked, message: `Đã seed ${defaults.length} thế giới mặc định, tick ${ticked} world` });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Phase 65.5 + 66: Event Log API ──────────────────────────────────────────
+
+const CATEGORY_EVENTS: Record<string, string[]> = {
+  war:            ["territory_capture","army_move","army_arrived","army_siege_started","army_siege_ended","world_war_start","world_war_end","battle_result","inter_world_war","rebellion"],
+  migration:      ["npc_migrate","migration_wave"],
+  npc:            ["npc_goal_changed","npc_birth","npc_death"],
+  faction:        ["faction_created","faction_leader_changed","election_result","diplomacy_action","political_crisis"],
+  economy:        ["economic_boom","economic_recession","trade_boom","harvest_festival"],
+  collapse:       ["territory_collapse"],
+  recolonization: ["territory_recolonized","natural_wonder","ancient_discovery","mysterious_arrival","hero_born","villain_rises","peace_treaty","plague"],
+};
+
+/* GET /api/simulation/events/:worldSlug — Phase 66A filtered event log */
+router.get("/simulation/events/:worldSlug", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const limit   = Math.min(Number(req.query.limit)  || 200, 500);
+    const offset  = Math.max(Number(req.query.offset) || 0,   0);
+    const category = req.query.category as string | undefined;
+    const eventName= req.query.event    as string | undefined;
+    const minTick  = req.query.minTick  ? Number(req.query.minTick) : undefined;
+    const maxTick  = req.query.maxTick  ? Number(req.query.maxTick) : undefined;
+    const faction  = req.query.faction  as string | undefined;
+    const territory= req.query.territory as string | undefined;
+
+    const conditions: any[] = [eq(worldEventLog.worldSlug, worldSlug)];
+
+    if (eventName) {
+      conditions.push(eq(worldEventLog.event, eventName));
+    } else if (category && CATEGORY_EVENTS[category]) {
+      conditions.push(inArray(worldEventLog.event, CATEGORY_EVENTS[category]));
+    }
+    if (minTick !== undefined) conditions.push(gte(worldEventLog.tick, minTick));
+    if (maxTick !== undefined) conditions.push(lte(worldEventLog.tick, maxTick));
+    if (faction) {
+      conditions.push(sql`${worldEventLog.payload}::text ilike ${"%" + faction + "%"}`);
+    }
+    if (territory) {
+      conditions.push(sql`${worldEventLog.payload}::text ilike ${"%" + territory + "%"}`);
+    }
+
+    const rows = await db.select()
+      .from(worldEventLog)
+      .where(and(...conditions))
+      .orderBy(desc(worldEventLog.ts))
+      .limit(limit)
+      .offset(offset);
+
+    return res.json(rows);
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+/* GET /api/simulation/events/:worldSlug/stats — Phase 66C event statistics */
+router.get("/simulation/events/:worldSlug/stats", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+
+    const rows = await db
+      .select({ event: worldEventLog.event, cnt: count() })
+      .from(worldEventLog)
+      .where(eq(worldEventLog.worldSlug, worldSlug))
+      .groupBy(worldEventLog.event)
+      .orderBy(desc(count()));
+
+    const byEvent: Record<string, number> = {};
+    let total = 0;
+    for (const r of rows) { byEvent[r.event] = Number(r.cnt); total += Number(r.cnt); }
+
+    const byCat: Record<string, number> = {};
+    for (const [cat, events] of Object.entries(CATEGORY_EVENTS)) {
+      byCat[cat] = events.reduce((s, e) => s + (byEvent[e] ?? 0), 0);
+    }
+
+    return res.json({ total, byEvent, byCat });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+/* POST /api/simulation/events/:worldSlug/prune — Phase 65.5 manual retention */
+router.post("/simulation/events/:worldSlug/prune", isAuthenticated, async (req, res) => {
+  try {
+    const { worldSlug } = req.params as Record<string, string>;
+    const { pruneEventLog } = await import("../lib/eventBus.js");
+    const deleted = await pruneEventLog(worldSlug);
+    return res.json({ deleted, message: `Đã xoá ${deleted} event cũ, giữ 100k mới nhất` });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
 export default router;

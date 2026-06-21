@@ -96,6 +96,7 @@ import SimulationAnalyticsPage from "@/pages/SimulationAnalyticsPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
 import WorldSeederPage from "@/pages/WorldSeederPage";
+import EventFeedPage from "@/pages/EventFeedPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -195,6 +196,7 @@ function Router() {
       <Route path="/world-map" component={WorldMapPage} />
       <Route path="/political-map" component={PoliticalMapPage} />
       <Route path="/simulation-analytics" component={SimulationAnalyticsPage} />
+      <Route path="/event-feed" component={EventFeedPage} />
       <Route path="/world-seeder" component={WorldSeederPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />

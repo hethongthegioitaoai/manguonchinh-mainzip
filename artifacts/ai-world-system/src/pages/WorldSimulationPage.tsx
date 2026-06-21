@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Activity, Zap, Users, TrendingUp, TrendingDown,
-  Heart, Shield, Globe, RefreshCw, Play, Cpu, BarChart3, Scroll,
+  Heart, Shield, Globe, RefreshCw, Play, Cpu, BarChart3, Scroll, Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -189,6 +189,10 @@ export default function WorldSimulationPage() {
           <Button variant="ghost" size="sm" onClick={() => setLocation("/simulation-analytics")}
             className="text-violet-400 hover:text-violet-200 text-xs">
             <BarChart3 className="w-3.5 h-3.5 mr-1" /> Analytics
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/event-feed")}
+            className="text-green-400 hover:text-green-200 text-xs">
+            <Radio className="w-3.5 h-3.5 mr-1" /> Event Feed
           </Button>
         </div>
 
