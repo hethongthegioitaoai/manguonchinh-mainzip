@@ -522,4 +522,109 @@ router.get("/unity/ws-info", (_req, res) => {
   });
 });
 
+// ─── GET /api/unity/map-state/:worldSlug ─────────────────────────────────
+// Political Map data: territories + factions + armies + recent history events
+// Designed for polling every 5-10 seconds from the frontend map renderer
+
+router.get("/unity/map-state/:worldSlug", async (req, res) => {
+  const { worldSlug } = req.params as Record<string, string>;
+  try {
+    // Territories with owner faction
+    const terrRows = await db.select({
+      id:            territories.id,
+      name:          territories.name,
+      type:          territories.type,
+      x:             territories.x,
+      y:             territories.y,
+      terrain:       territories.terrain,
+      status:        territories.status,
+      population:    territories.population,
+      prosperity:    territories.prosperity,
+      security:      territories.security,
+      ownerFactionId: territories.ownerFactionId,
+    }).from(territories).where(eq(territories.worldSlug, worldSlug));
+
+    // Factions
+    const factionRows = await db.select({
+      id:        npcFactions.id,
+      name:      npcFactions.name,
+      type:      npcFactions.type,
+      influence: sql<number>`coalesce(${npcFactions.influence}, 0)`,
+      treasury:  sql<number>`coalesce(${npcFactions.treasury}, 0)`,
+    }).from(npcFactions).where(eq(npcFactions.worldSlug, worldSlug));
+
+    // Armies (via governments → territories)
+    const terrIds = terrRows.map(t => t.id);
+    let armyData: { id: string; name: string; territoryId: string; soldiers: number; power: number; morale: number; supply: number }[] = [];
+    if (terrIds.length > 0) {
+      const { inArray } = await import("drizzle-orm");
+      const govRows = await db.select({ id: npcGovernments.id, territoryId: npcGovernments.territoryId }).from(npcGovernments).where(inArray(npcGovernments.territoryId, terrIds));
+      const govIds = govRows.map(g => g.id);
+      if (govIds.length > 0) {
+        const armies = await db.select({
+          id:            militaryForces.id,
+          armyName:      militaryForces.armyName,
+          territoryId:   militaryForces.territoryId,
+          totalSoldiers: militaryForces.totalSoldiers,
+          militaryPower: militaryForces.militaryPower,
+          morale:        militaryForces.morale,
+          supplyLevel:   militaryForces.supplyLevel,
+        }).from(militaryForces).where(inArray(militaryForces.governmentId, govIds));
+        armyData = armies.map(a => ({
+          id:         a.id,
+          name:       a.armyName,
+          territoryId: a.territoryId ?? "",
+          soldiers:   a.totalSoldiers,
+          power:      a.militaryPower,
+          morale:     a.morale,
+          supply:     a.supplyLevel,
+        }));
+      }
+    }
+
+    // Recent history events (last 20)
+    const { worldHistory } = await import("@workspace/db/schema");
+    const histRows = await db.select({
+      tick:      worldHistory.tick,
+      eventType: worldHistory.eventType,
+      title:     worldHistory.title,
+      actors:    worldHistory.actors,
+      createdAt: worldHistory.createdAt,
+    }).from(worldHistory)
+      .where(eq(worldHistory.worldSlug, worldSlug))
+      .orderBy(desc(worldHistory.tick))
+      .limit(20);
+
+    // Build faction color map (deterministic from id)
+    const factionMap = new Map(factionRows.map(f => [f.id, f]));
+
+    const territoryDTOs = terrRows.map(t => ({
+      id:         t.id,
+      name:       t.name,
+      type:       t.type,
+      x:          t.x,
+      y:          t.y,
+      terrain:    t.terrain,
+      status:     t.status,
+      population: t.population,
+      prosperity: t.prosperity,
+      security:   t.security,
+      owner:      t.ownerFactionId ? (factionMap.get(t.ownerFactionId)?.name ?? null) : null,
+      ownerId:    t.ownerFactionId ?? null,
+    }));
+
+    return res.json({
+      worldSlug,
+      ts: Date.now(),
+      territories: territoryDTOs,
+      factions: factionRows,
+      armies: armyData,
+      recentHistory: histRows,
+    });
+  } catch (err) {
+    console.error("[Unity] map-state error:", err);
+    return res.status(500).json({ error: "Failed to fetch map state" });
+  }
+});
+
 export default router;

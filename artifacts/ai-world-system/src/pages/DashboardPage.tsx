@@ -1008,6 +1008,14 @@ export default function DashboardPage() {
                         disabled: false,
                         onClick: () => setLocation("/simulation"),
                       },
+                      {
+                        icon: Map,
+                        label: "BẢN ĐỒ CHÍNH TRỊ 2D",
+                        sub: "Lãnh thổ theo màu phe phái, quân đội, thịnh vượng heatmap, lịch sử timeline",
+                        tag: "NEW",
+                        disabled: false,
+                        onClick: () => setLocation("/political-map"),
+                      },
                     ].map((action) => (
                       <motion.div
                         key={action.label}

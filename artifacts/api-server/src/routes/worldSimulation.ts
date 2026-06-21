@@ -407,7 +407,7 @@ router.post("/simulation/stress-test/:worldSlug", isAuthenticated, async (req, r
 });
 
 /* GET /api/simulation/history/:worldSlug — lịch sử sự kiện thế giới */
-router.get("/simulation/history/:worldSlug", isAuthenticated, async (req, res) => {
+router.get("/simulation/history/:worldSlug", async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const limit = Math.min(Number(req.query.limit) || 50, 200);
@@ -438,7 +438,7 @@ router.get("/simulation/history/:worldSlug", isAuthenticated, async (req, res) =
 });
 
 /* GET /api/simulation/history/:worldSlug/timeline — compact timeline for Unity/map */
-router.get("/simulation/history/:worldSlug/timeline", isAuthenticated, async (req, res) => {
+router.get("/simulation/history/:worldSlug/timeline", async (req, res) => {
   try {
     const { worldSlug } = req.params as Record<string, string>;
     const rows = await db.select({
